@@ -70,6 +70,10 @@
   .oitems{font-size:10.5px;color:var(--text-dim);margin-top:7px;line-height:1.6;background:var(--bg);
     border-radius:9px;padding:6px 9px}
   .oprice{font-size:12.5px;font-weight:800;color:var(--accent-dark);margin-top:8px}
+  .quick-move-row{display:flex;justify-content:space-between;gap:6px;margin-top:9px}
+  .quick-move-btn{flex:1;font-size:9px;font-weight:700;padding:6px 4px;border-radius:8px;
+    border:1px solid var(--line);background:var(--bg);color:var(--text-dim);cursor:pointer;font-family:inherit}
+  .quick-move-btn:hover{background:rgba(124,92,255,.1);color:var(--accent-dark)}
 
   .inv-wrap{padding:16px;max-width:600px;margin:0 auto}
   .inv-card{background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:10px;
@@ -110,7 +114,7 @@
   .print-btn{width:100%;margin-top:10px;background:var(--accent-dark);color:#fff;border:none;padding:12px;
     border-radius:12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
 
-  #invoiceTemplate{position:fixed;top:-9999px;left:-9999px;width:380px;background:#fff;padding:28px;
+  #invoiceTemplate{position:absolute;top:0;left:-9999px;width:380px;background:#fff;padding:28px;
     font-family:'Cairo',Tahoma,sans-serif;direction:rtl}
   .inv-header{text-align:center;border-bottom:2px solid var(--accent);padding-bottom:14px;margin-bottom:16px}
   .inv-brand{font-size:18px;font-weight:800;color:var(--accent-dark)}
@@ -331,12 +335,19 @@
         card.className = 'ocard ' + col.cls;
         card.onclick = function () { openDetail(o.id); };
         const itemsText = (o.items || []).map(function (i) { return i.productName + ' ×' + i.quantity; }).join('<br>');
+        const colIndex = COLUMNS.findIndex(function (c) { return c.key === col.key; });
+        const prevCol = COLUMNS[colIndex - 1];
+        const nextCol = COLUMNS[colIndex + 1];
         card.innerHTML =
           '<div class="ocode">P-' + String(o.id).padStart(4, '0') + '</div>' +
           '<div class="oname">' + o.customerName + '</div>' +
           '<div class="ophone">📞 ' + o.phone + '</div>' +
           (itemsText ? '<div class="oitems">' + itemsText + '</div>' : '') +
-          '<div class="oprice">' + Number(o.total).toLocaleString() + ' د.ع</div>';
+          '<div class="oprice">' + Number(o.total).toLocaleString() + ' د.ع</div>' +
+          '<div class="quick-move-row">' +
+          (prevCol ? '<button class="quick-move-btn" onclick="event.stopPropagation();quickMove(' + o.id + ',\'' + prevCol.key + '\')">◀ ' + prevCol.label.replace(/^[^\s]+\s/, '') + '</button>' : '<span></span>') +
+          (nextCol ? '<button class="quick-move-btn" onclick="event.stopPropagation();quickMove(' + o.id + ',\'' + nextCol.key + '\')">' + nextCol.label.replace(/^[^\s]+\s/, '') + ' ▶</button>' : '<span></span>') +
+          '</div>';
         body.appendChild(card);
       });
     });
@@ -380,15 +391,42 @@
     document.getElementById('detailOverlay').classList.remove('open');
   }
 
-  function saveStatus(orderId) {
-    const newStatus = document.getElementById('statusSelect').value;
+  function quickMove(orderId, newStatus) {
     fetch(API_URL + '/update-order-status', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ orderId: orderId, status: newStatus }),
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (data.result === 'success') { closeDetail(); loadOrders(); }
+        if (data.result === 'success') { loadOrders(); }
+        else { alert('تعذر نقل الطلب: ' + (data.error || 'خطأ غير معروف')); }
+      })
+      .catch(function () { alert('تعذر الاتصال بالخادم — تأكد من الإنترنت.'); });
+  }
+
+  function saveStatus(orderId) {
+    const newStatus = document.getElementById('statusSelect').value;
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
+
+    fetch(API_URL + '/update-order-status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: orderId, status: newStatus }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result === 'success') {
+          closeDetail();
+          loadOrders();
+        } else {
+          btn.disabled = false; btn.textContent = originalText;
+          alert('تعذر حفظ الحالة: ' + (data.error || 'خطأ غير معروف') + '\nجرّب مرة ثانية.');
+        }
+      })
+      .catch(function () {
+        btn.disabled = false; btn.textContent = originalText;
+        alert('تعذر الاتصال بالخادم — تأكد من الإنترنت وحاول مرة ثانية.');
       });
   }
 
@@ -413,11 +451,17 @@
     if (!o) return;
     const tpl = document.getElementById('invoiceTemplate');
     tpl.innerHTML = buildInvoiceHtml(o);
-    html2pdf().from(tpl).set({
-      filename: 'فاتورة-' + 'P-' + String(o.id).padStart(4, '0') + '.pdf',
-      margin: 0,
-      html2canvas: { scale: 2 },
-    }).save();
+    // نستنى دورة رسم وحدة (المتصفح يحتاج وقت يرسم المحتوى المُدرَج توًا
+    // قبل ما html2canvas يلتقطه — هذا سبب الفاتورة الفاضية سابقًا).
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        html2pdf().from(tpl).set({
+          filename: 'فاتورة-' + 'P-' + String(o.id).padStart(4, '0') + '.pdf',
+          margin: 0,
+          html2canvas: { scale: 2, windowWidth: 380 },
+        }).save();
+      });
+    });
   }
 
   function loadInventory() {
