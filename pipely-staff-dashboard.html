@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الموظفين — Pipely</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root{
+    --bg:#f7f5fb;--card:#fff;--line:#e7e1f2;
+    --accent:#7c5cff;--accent-dark:#5f3fe0;
+    --amber:#e0932e;--green:#1f9d54;--blue:#2f8fe0;--gray:#8a839c;--danger:#d63d33;
+    --text:#241f38;--text-dim:#6b6480;--text-mute:#9992ad;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:78px}
+
+  .topbar{background:linear-gradient(120deg,var(--accent),var(--accent-dark));color:#fff;padding:16px 18px;
+    display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
+  .logo{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .logo .dot{width:8px;height:8px;background:#fff;border-radius:50%;}
+  .top-right{display:flex;align-items:center;gap:10px}
+  .refresh-btn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:12px;font-weight:700;
+    padding:8px 14px;border-radius:10px;cursor:pointer;font-family:inherit}
+  .sound-toggle{background:rgba(255,255,255,.18);border:none;color:#fff;width:34px;height:34px;
+    border-radius:10px;cursor:pointer;font-size:15px}
+  .badge{background:var(--danger);color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:20px;
+    display:none;animation:pulse 1s infinite}
+  .badge.show{display:inline-block}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+  .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-card{background:#fff;border-radius:22px;padding:32px 26px;max-width:340px;width:100%;
+    box-shadow:0 20px 50px -20px rgba(124,92,255,.35)}
+  .login-logo{text-align:center;font-size:20px;font-weight:800;color:var(--accent-dark);margin-bottom:4px}
+  .login-sub{text-align:center;font-size:12px;color:var(--text-mute);margin-bottom:22px}
+  .login-card label{display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin:12px 0 6px}
+  .login-card label:first-of-type{margin-top:0}
+  .login-card input{width:100%;padding:13px 16px;border:1.5px solid var(--line);border-radius:16px;
+    font-size:14px;font-family:inherit;background:var(--bg)}
+  .login-card input:focus{outline:none;border-color:var(--accent)}
+  .login-btn{width:100%;margin-top:18px;background:linear-gradient(120deg,var(--accent),var(--accent-dark));
+    color:#fff;border:none;padding:14px;border-radius:16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+  .login-btn:disabled{opacity:.6}
+  .login-msg{margin-top:12px;font-size:12.5px;text-align:center;color:var(--danger);display:none}
+
+  #appContent{display:none}
+
+  .board{display:flex;gap:12px;overflow-x:auto;padding:16px;align-items:flex-start}
+  .col{min-width:260px;background:#efeaf7;border-radius:16px;padding:12px;max-height:calc(100vh - 170px);
+    display:flex;flex-direction:column}
+  .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px}
+  .col-title{font-size:12.5px;font-weight:800}
+  .col-count{background:#fff;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;color:var(--text-dim)}
+  .col-body{overflow-y:auto;flex:1}
+  .empty-col{text-align:center;font-size:11px;color:var(--text-mute);padding:20px 10px}
+
+  .ocard{background:#fff;border-radius:13px;padding:13px;margin-bottom:10px;box-shadow:0 6px 16px -12px rgba(0,0,0,.2);
+    border-inline-start:4px solid var(--gray);cursor:pointer}
+  .ocard.c-new{border-inline-start-color:var(--blue)}
+  .ocard.c-prep{border-inline-start-color:var(--amber)}
+  .ocard.c-ready{border-inline-start-color:var(--accent)}
+  .ocard.c-done{border-inline-start-color:var(--green)}
+  .ocard.c-problem{border-inline-start-color:var(--danger)}
+
+  .oname{font-size:13px;font-weight:800}
+  .ocode{font-size:10px;color:var(--text-mute);margin-top:1px}
+  .ophone{font-size:11px;color:var(--text-mute);margin-top:4px}
+  .oitems{font-size:10.5px;color:var(--text-dim);margin-top:7px;line-height:1.6;background:var(--bg);
+    border-radius:9px;padding:6px 9px}
+  .oprice{font-size:12.5px;font-weight:800;color:var(--accent-dark);margin-top:8px}
+
+  .inv-wrap{padding:16px;max-width:600px;margin:0 auto}
+  .inv-card{background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:10px;
+    box-shadow:0 6px 16px -12px rgba(0,0,0,.15);display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .inv-info{flex:1}
+  .inv-name{font-size:13px;font-weight:800}
+  .inv-sku{font-size:10.5px;color:var(--text-mute);margin-top:2px}
+  .inv-stock{font-size:16px;font-weight:800;color:var(--accent-dark);margin-top:6px}
+  .inv-actions{display:flex;flex-direction:column;gap:6px}
+  .inv-btn{font-size:10.5px;font-weight:700;padding:7px 12px;border-radius:10px;border:none;cursor:pointer;font-family:inherit}
+  .inv-btn.add{background:rgba(31,157,84,.12);color:var(--green)}
+  .inv-btn.set{background:rgba(124,92,255,.12);color:var(--accent-dark)}
+
+  .acc-wrap{padding:20px;max-width:400px;margin:0 auto;text-align:center}
+  .acc-card{background:#fff;border-radius:18px;padding:24px;box-shadow:0 10px 25px -16px rgba(0,0,0,.15)}
+  .acc-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(120deg,var(--accent),var(--accent-dark));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin:0 auto 14px}
+  .acc-name{font-size:16px;font-weight:800}
+  .acc-logout{width:100%;margin-top:20px;background:var(--danger);color:#fff;border:none;padding:12px;
+    border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+    display:flex;padding:9px 8px calc(9px + env(safe-area-inset-bottom));z-index:15;gap:4px;
+    box-shadow:0 -8px 20px -14px rgba(0,0,0,.15)}
+  .nav-btn{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:4px;
+    padding:6px 2px 5px;border-radius:14px;cursor:pointer;font-family:inherit;color:var(--text-mute);
+    transition:background .15s,color .15s}
+  .nav-btn.on{color:var(--accent-dark);background:rgba(124,92,255,.09)}
+  .nav-ic{width:23px;height:23px}
+  .nav-label{font-size:10px;font-weight:600}
+  .nav-btn.on .nav-label{font-weight:800}
+
+  .overlay{display:none;position:fixed;inset:0;background:rgba(36,31,56,.5);z-index:30;align-items:center;
+    justify-content:center;padding:16px}
+  .overlay.open{display:flex}
+  .modal{background:#fff;border-radius:20px;padding:22px;max-width:400px;width:100%;max-height:85vh;overflow-y:auto}
+  .modal-close{float:left;background:var(--bg);border:none;width:30px;height:30px;border-radius:9px;font-size:14px;cursor:pointer}
+  .print-btn{width:100%;margin-top:10px;background:var(--accent-dark);color:#fff;border:none;padding:12px;
+    border-radius:12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+
+  #invoiceTemplate{position:fixed;top:-9999px;left:-9999px;width:380px;background:#fff;padding:28px;
+    font-family:'Cairo',Tahoma,sans-serif;direction:rtl}
+  .inv-header{text-align:center;border-bottom:2px solid var(--accent);padding-bottom:14px;margin-bottom:16px}
+  .inv-brand{font-size:18px;font-weight:800;color:var(--accent-dark)}
+  .inv-title{font-size:12px;color:var(--text-mute);margin-top:2px}
+  .inv-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:14px}
+  .inv-block{background:var(--bg);border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.9}
+  .inv-table{width:100%;border-collapse:collapse;font-size:11px}
+  .inv-table th{text-align:right;border-bottom:2px solid var(--line);padding:6px 4px;color:var(--text-dim)}
+  .inv-table td{border-bottom:1px solid var(--line);padding:8px 4px}
+  .inv-total{display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;
+    border-top:2px solid var(--accent);font-weight:800;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">👤 Pipely — دخول الموظفين</div>
+    <div class="login-sub">لكل موظف حسابه الخاص</div>
+    <label for="staffUsername">اسم المستخدم</label>
+    <input type="text" id="staffUsername" placeholder="اسم المستخدم">
+    <label for="staffPassword">كلمة المرور</label>
+    <input type="password" id="staffPassword" placeholder="كلمة المرور">
+    <button class="login-btn" id="staffLoginBtn" onclick="staffLogin()">🔓 تسجيل الدخول</button>
+    <div class="login-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="appContent">
+  <div class="topbar">
+    <div class="logo"><span class="dot"></span> لوحة الموظفين</div>
+    <div class="top-right">
+      <span class="badge" id="badge">0</span>
+      <button class="sound-toggle" id="soundBtn" onclick="toggleSound()">🔇</button>
+      <button class="refresh-btn" onclick="loadOrders()">🔄 تحديث</button>
+    </div>
+  </div>
+
+  <div class="tab-view" id="kanbanView">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="tab-view" id="inventoryView" style="display:none;">
+    <div class="inv-wrap" id="invWrap"></div>
+  </div>
+
+  <div class="tab-view" id="accountView" style="display:none;">
+    <div class="acc-wrap">
+      <div class="acc-card">
+        <div class="acc-avatar" id="accAvatar"></div>
+        <div class="acc-name" id="accName"></div>
+        <button class="acc-logout" onclick="staffLogout()">🚪 تسجيل الخروج</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn on" id="navKanban" onclick="switchStaffTab('kanban')">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="6" height="16" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="9.5" y="4" width="6" height="10" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="16" y="4" width="6" height="13" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span class="nav-label">حالة الزبائن</span>
+    </button>
+    <button class="nav-btn" id="navInventory" onclick="switchStaffTab('inventory')">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><path d="M3.5 8L12 4l8.5 4-8.5 4-8.5-4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8v8l8.5 4 8.5-4V8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="nav-label">المخزون</span>
+    </button>
+    <button class="nav-btn" id="navAccount2" onclick="switchStaffTab('account')">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.3" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="nav-label">حسابي</span>
+    </button>
+  </div>
+</div>
+
+<div class="overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+  <div class="modal" id="detailModal"></div>
+</div>
+
+<div id="invoiceTemplate"></div>
+
+<audio id="alertSound" preload="auto">
+  <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=" type="audio/wav">
+</audio>
+
+<script>
+  const API_URL = 'https://pipely-api.mustafa-mo-hussain.workers.dev';
+  const STAFF_SESSION_KEY = 'pipely_staff_session';
+  const COLUMNS = [
+    { key: '🆕 طلب جديد', label: '🆕 طلب جديد', cls: 'c-new' },
+    { key: '⚙️ جاري التجهيز', label: '⚙️ جاري التجهيز', cls: 'c-prep' },
+    { key: '📦 جاهز للتسليم', label: '📦 جاهز للتسليم', cls: 'c-ready' },
+    { key: '✅ تم الاستلام والدفع', label: '✅ تم الاستلام والدفع', cls: 'c-done' },
+    { key: '🚫 مشكلة بالطلب', label: '🚫 مشكلة بالطلب', cls: 'c-problem' },
+  ];
+
+  let orders = [];
+  let soundOn = false;
+  let lastNewCount = 0;
+
+  function getStaffSession() {
+    try { return JSON.parse(localStorage.getItem(STAFF_SESSION_KEY) || 'null'); } catch (e) { return null; }
+  }
+
+  function staffLogin() {
+    const username = document.getElementById('staffUsername').value.trim();
+    const password = document.getElementById('staffPassword').value.trim();
+    const msg = document.getElementById('loginMsg');
+    const btn = document.getElementById('staffLoginBtn');
+
+    if (!username || !password) {
+      msg.textContent = 'الرجاء إدخال اسم المستخدم وكلمة المرور';
+      msg.style.display = 'block';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'جارٍ التحقق...';
+
+    fetch(API_URL + '/staff-login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, password: password }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول';
+        if (data.result === 'success') {
+          try { localStorage.setItem(STAFF_SESSION_KEY, JSON.stringify({ username: username, staffName: data.staffName })); } catch (e) {}
+          enterApp();
+        } else {
+          msg.textContent = data.error || 'بيانات الدخول غير صحيحة';
+          msg.style.display = 'block';
+        }
+      })
+      .catch(function () {
+        btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول';
+        msg.textContent = 'تعذر الاتصال بالخادم';
+        msg.style.display = 'block';
+      });
+  }
+
+  function staffLogout() {
+    try { localStorage.removeItem(STAFF_SESSION_KEY); } catch (e) {}
+    document.getElementById('appContent').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+
+  function enterApp() {
+    const session = getStaffSession();
+    if (!session) return;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
+    document.getElementById('accName').textContent = session.staffName;
+    document.getElementById('accAvatar').textContent = (session.staffName || '?').charAt(0);
+    loadOrders();
+    setInterval(loadOrders, 15000);
+  }
+
+  function switchStaffTab(tab) {
+    ['kanban', 'inventory', 'account'].forEach(function (t) {
+      document.getElementById(t + 'View').style.display = (t === tab) ? 'block' : 'none';
+    });
+    document.getElementById('navKanban').classList.toggle('on', tab === 'kanban');
+    document.getElementById('navInventory').classList.toggle('on', tab === 'inventory');
+    document.getElementById('navAccount2').classList.toggle('on', tab === 'account');
+    if (tab === 'inventory') loadInventory();
+  }
+
+  function toggleSound() {
+    soundOn = !soundOn;
+    document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+    if (soundOn) {
+      const a = document.getElementById('alertSound');
+      a.play().then(function () { a.pause(); a.currentTime = 0; }).catch(function () {});
+    }
+  }
+  function playAlert() {
+    if (!soundOn) return;
+    const a = document.getElementById('alertSound');
+    a.currentTime = 0;
+    a.play().catch(function () {});
+  }
+
+  function loadOrders() {
+    fetch(API_URL + '/all-orders')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success') return;
+        const newOrders = data.orders || [];
+        const newCount = newOrders.filter(function (o) { return o.status === '🆕 طلب جديد'; }).length;
+        if (newCount > lastNewCount) playAlert();
+        lastNewCount = newCount;
+
+        const badge = document.getElementById('badge');
+        if (newCount > 0) { badge.textContent = newCount; badge.classList.add('show'); }
+        else { badge.classList.remove('show'); }
+
+        orders = newOrders;
+        renderBoard();
+      })
+      .catch(function () {});
+  }
+
+  function renderBoard() {
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    COLUMNS.forEach(function (col) {
+      const colOrders = orders.filter(function (o) { return o.status === col.key; });
+      const colEl = document.createElement('div');
+      colEl.className = 'col';
+      colEl.innerHTML =
+        '<div class="col-head"><span class="col-title">' + col.label + '</span><span class="col-count">' + colOrders.length + '</span></div>' +
+        '<div class="col-body" id="colBody_' + col.cls + '"></div>';
+      board.appendChild(colEl);
+
+      const body = colEl.querySelector('.col-body');
+      if (colOrders.length === 0) {
+        body.innerHTML = '<div class="empty-col">ماكو طلبات هنا</div>';
+        return;
+      }
+      colOrders.forEach(function (o) {
+        const card = document.createElement('div');
+        card.className = 'ocard ' + col.cls;
+        card.onclick = function () { openDetail(o.id); };
+        const itemsText = (o.items || []).map(function (i) { return i.productName + ' ×' + i.quantity; }).join('<br>');
+        card.innerHTML =
+          '<div class="ocode">P-' + String(o.id).padStart(4, '0') + '</div>' +
+          '<div class="oname">' + o.customerName + '</div>' +
+          '<div class="ophone">📞 ' + o.phone + '</div>' +
+          (itemsText ? '<div class="oitems">' + itemsText + '</div>' : '') +
+          '<div class="oprice">' + Number(o.total).toLocaleString() + ' د.ع</div>';
+        body.appendChild(card);
+      });
+    });
+  }
+
+  function openDetail(orderId) {
+    const o = orders.find(function (x) { return x.id === orderId; });
+    if (!o) return;
+    const modal = document.getElementById('detailModal');
+    const itemsHtml = (o.items || []).map(function (i) {
+      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px;">' +
+        '<span>' + i.productName + '</span><span style="font-weight:700;">× ' + i.quantity + '</span></div>';
+    }).join('');
+
+    modal.innerHTML =
+      '<button class="modal-close" onclick="closeDetail()">✕</button>' +
+      '<div style="clear:both;"></div>' +
+      '<h2 style="font-size:16px;font-weight:800;margin-top:10px;">P-' + String(o.id).padStart(4, '0') + '</h2>' +
+      '<p style="font-size:13px;color:var(--text-dim);margin-top:4px;">' + o.status + '</p>' +
+      '<div style="background:var(--bg);border-radius:12px;padding:12px;margin-top:14px;font-size:12.5px;line-height:1.9;">' +
+      '<b>' + o.customerName + '</b><br>📞 ' + o.phone +
+      (o.address ? '<br>📍 ' + o.address : '') +
+      (o.notes ? '<br>📝 ' + o.notes : '') +
+      '</div>' +
+      '<div style="margin-top:14px;">' + itemsHtml + '</div>' +
+      '<div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid var(--line);font-weight:800;">' +
+      '<span>المجموع</span><span style="color:var(--accent-dark);">' + Number(o.total).toLocaleString() + ' د.ع</span></div>' +
+      '<div style="margin-top:16px;">' +
+      '<label style="font-size:11px;font-weight:700;color:var(--text-dim);">تغيير الحالة</label>' +
+      '<select id="statusSelect" style="width:100%;padding:11px;border-radius:12px;border:1px solid var(--line);margin-top:6px;font-family:inherit;font-size:13px;">' +
+      COLUMNS.map(function (c) { return '<option value="' + c.key + '" ' + (c.key === o.status ? 'selected' : '') + '>' + c.label + '</option>'; }).join('') +
+      '</select>' +
+      '<button onclick="saveStatus(' + o.id + ')" style="width:100%;margin-top:10px;background:var(--accent);color:#fff;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 حفظ الحالة</button>' +
+      '<button class="print-btn" onclick="printInvoice(' + o.id + ')">🖨️ طباعة الفاتورة (PDF)</button>' +
+      '</div>';
+
+    document.getElementById('detailOverlay').classList.add('open');
+  }
+
+  function closeDetail() {
+    document.getElementById('detailOverlay').classList.remove('open');
+  }
+
+  function saveStatus(orderId) {
+    const newStatus = document.getElementById('statusSelect').value;
+    fetch(API_URL + '/update-order-status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: orderId, status: newStatus }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result === 'success') { closeDetail(); loadOrders(); }
+      });
+  }
+
+  function buildInvoiceHtml(order) {
+    const code = 'P-' + String(order.id).padStart(4, '0');
+    const dateStr = new Date().toLocaleDateString('ar-IQ');
+    const itemsRows = (order.items || []).map(function (i) {
+      return '<tr><td>' + (i.sku || '-') + '</td><td>' + i.productName + '</td><td>' + i.quantity + '</td></tr>';
+    }).join('');
+    return '' +
+      '<div class="inv-header"><div class="inv-brand">Pipely</div><div class="inv-title">فاتورة شراء</div></div>' +
+      '<div class="inv-meta"><span>رقم الطلب: ' + code + '</span><span>التاريخ: ' + dateStr + '</span></div>' +
+      '<div class="inv-block"><b>' + order.customerName + '</b><br>📞 ' + order.phone +
+      (order.address ? '<br>📍 ' + order.address : '') + '</div>' +
+      '<table class="inv-table"><thead><tr><th>الكود</th><th>المنتج</th><th>الكمية</th></tr></thead>' +
+      '<tbody>' + itemsRows + '</tbody></table>' +
+      '<div class="inv-total"><span>المجموع</span><span>' + Number(order.total).toLocaleString() + ' د.ع</span></div>';
+  }
+
+  function printInvoice(orderId) {
+    const o = orders.find(function (x) { return x.id === orderId; });
+    if (!o) return;
+    const tpl = document.getElementById('invoiceTemplate');
+    tpl.innerHTML = buildInvoiceHtml(o);
+    html2pdf().from(tpl).set({
+      filename: 'فاتورة-' + 'P-' + String(o.id).padStart(4, '0') + '.pdf',
+      margin: 0,
+      html2canvas: { scale: 2 },
+    }).save();
+  }
+
+  function loadInventory() {
+    const wrap = document.getElementById('invWrap');
+    wrap.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
+    fetch(API_URL + '/inventory')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success') { wrap.innerHTML = '<p>تعذر تحميل المخزون</p>'; return; }
+        wrap.innerHTML = '';
+        (data.products || []).forEach(function (p) {
+          const card = document.createElement('div');
+          card.className = 'inv-card';
+          card.innerHTML =
+            '<div class="inv-info"><div class="inv-name">' + p.name + '</div>' +
+            '<div class="inv-sku">' + (p.sku || 'بدون كود') + '</div>' +
+            '<div class="inv-stock">' + p.stock + ' قطعة</div></div>' +
+            '<div class="inv-actions">' +
+            '<button class="inv-btn add" onclick="addStockPrompt(' + p.id + ',\'' + p.name.replace(/'/g, "") + '\')">+ إدخال مخزون</button>' +
+            '<button class="inv-btn set" onclick="setStockPrompt(' + p.id + ',' + p.stock + ')">✏️ تعديل يدوي</button>' +
+            '</div>';
+          wrap.appendChild(card);
+        });
+      })
+      .catch(function () { wrap.innerHTML = '<p>تعذر الاتصال بالخادم</p>'; });
+  }
+
+  function addStockPrompt(productId, productName) {
+    const qty = prompt('كم قطعة وصلت من "' + productName + '"؟');
+    const n = parseInt(qty, 10);
+    if (!n || n <= 0) return;
+    fetch(API_URL + '/add-stock', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId: productId, quantity: n }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function () { loadInventory(); });
+  }
+
+  function setStockPrompt(productId, currentStock) {
+    const qty = prompt('عدّل الكمية الحالية إلى:', currentStock);
+    if (qty === null) return;
+    const n = parseInt(qty, 10);
+    if (isNaN(n) || n < 0) return;
+    fetch(API_URL + '/set-stock', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId: productId, quantity: n }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function () { loadInventory(); });
+  }
+
+  (function init() {
+    if (getStaffSession()) enterApp();
+  })();
+</script>
+</body>
+</html>
