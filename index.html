@@ -58,7 +58,9 @@
   .empty-col{text-align:center;font-size:11px;color:var(--text-mute);padding:20px 10px}
 
   .ocard{background:#fff;border-radius:13px;padding:13px;margin-bottom:10px;box-shadow:0 6px 16px -12px rgba(0,0,0,.2);
-    border-inline-start:4px solid var(--gray);cursor:pointer}
+    border-inline-start:4px solid var(--gray);cursor:grab;touch-action:none;user-select:none}
+  .ocard.dragging{cursor:grabbing;box-shadow:0 20px 40px -14px rgba(36,31,56,.4);transform:rotate(-2deg);opacity:.95}
+  .col.drop-target{background:rgba(124,92,255,.15);outline:2px dashed var(--accent)}
   .ocard.c-new{border-inline-start-color:var(--blue)}
   .ocard.c-prep{border-inline-start-color:var(--amber)}
   .ocard.c-ready{border-inline-start-color:var(--accent)}
@@ -368,6 +370,7 @@
       const colOrders = orders.filter(function (o) { return o.status === col.key; });
       const colEl = document.createElement('div');
       colEl.className = 'col';
+      colEl.setAttribute('data-status-key', col.key);
       colEl.innerHTML =
         '<div class="col-head"><span class="col-title">' + col.ic + col.label + '</span><span class="col-count">' + colOrders.length + '</span></div>' +
         '<div class="col-body" id="colBody_' + col.cls + '"></div>';
@@ -381,7 +384,8 @@
       colOrders.forEach(function (o) {
         const card = document.createElement('div');
         card.className = 'ocard ' + col.cls;
-        card.onclick = function () { openDetail(o.id); };
+        card.setAttribute('data-order-id', o.id);
+        card.onclick = function () { if (!justDragged) openDetail(o.id); };
         const itemsText = (o.items || []).map(function (i) { return i.productName + ' ×' + i.quantity; }).join('<br>');
         const colIndex = COLUMNS.findIndex(function (c) { return c.key === col.key; });
         const prevCol = COLUMNS[colIndex - 1];
@@ -397,9 +401,93 @@
           (nextCol ? '<button class="quick-move-btn" onclick="event.stopPropagation();quickMove(' + o.id + ',\'' + nextCol.key + '\')">' + nextCol.label.replace(/^[^\s]+\s/, '') + ' ▶</button>' : '<span></span>') +
           '</div>';
         body.appendChild(card);
+        enableCardDrag(card, o.id);
       });
     });
   }
+
+  // ===================== السحب والإفلات (يشتغل بالفأرة واللمس مع بعض) =====================
+  let dragState = null;
+  let justDragged = false;
+
+  function enableCardDrag(card, orderId) {
+    card.addEventListener('pointerdown', function (evt) {
+      // نتجاهل الضغط على الأزرار الصغيرة داخل البطاقة (النقل السريع)
+      if (evt.target.closest('.quick-move-btn')) return;
+
+      const rect = card.getBoundingClientRect();
+      dragState = {
+        orderId: orderId,
+        card: card,
+        startX: evt.clientX,
+        startY: evt.clientY,
+        offsetX: evt.clientX - rect.left,
+        offsetY: evt.clientY - rect.top,
+        width: rect.width,
+        moved: false,
+      };
+    });
+  }
+
+  window.addEventListener('pointermove', function (evt) {
+    if (!dragState) return;
+    const dx = Math.abs(evt.clientX - dragState.startX);
+    const dy = Math.abs(evt.clientY - dragState.startY);
+
+    // نبدأ السحب الفعلي بس لو تحرّك الإصبع/الفأرة مسافة حقيقية (يمنع تعارضه مع نقرة عادية)
+    if (!dragState.moved && (dx > 8 || dy > 8)) {
+      dragState.moved = true;
+      dragState.card.classList.add('dragging');
+      dragState.card.style.position = 'fixed';
+      dragState.card.style.width = dragState.width + 'px';
+      dragState.card.style.zIndex = '50';
+      dragState.card.style.pointerEvents = 'none';
+    }
+    if (!dragState.moved) return;
+
+    dragState.card.style.left = (evt.clientX - dragState.offsetX) + 'px';
+    dragState.card.style.top = (evt.clientY - dragState.offsetY) + 'px';
+
+    document.querySelectorAll('.col').forEach(function (c) { c.classList.remove('drop-target'); });
+    const under = document.elementFromPoint(evt.clientX, evt.clientY);
+    const col = under && under.closest('.col');
+    if (col) col.classList.add('drop-target');
+  });
+
+  window.addEventListener('pointerup', function (evt) {
+    if (!dragState) return;
+    const wasMoved = dragState.moved;
+    const orderId = dragState.orderId;
+    const card = dragState.card;
+
+    if (wasMoved) {
+      card.classList.remove('dragging');
+      card.style.position = '';
+      card.style.left = '';
+      card.style.top = '';
+      card.style.width = '';
+      card.style.zIndex = '';
+      card.style.pointerEvents = '';
+
+      document.querySelectorAll('.col').forEach(function (c) { c.classList.remove('drop-target'); });
+      const under = document.elementFromPoint(evt.clientX, evt.clientY);
+      const col = under && under.closest('.col');
+      if (col) {
+        const newStatus = col.getAttribute('data-status-key');
+        const order = orders.find(function (o) { return o.id === orderId; });
+        if (order && order.status !== newStatus) {
+          quickMove(orderId, newStatus);
+        } else {
+          renderBoard(); // نرجّعها بمكانها لو أفلتها بنفس العمود
+        }
+      } else {
+        renderBoard();
+      }
+      justDragged = true;
+      setTimeout(function () { justDragged = false; }, 50);
+    }
+    dragState = null;
+  });
 
   function openDetail(orderId) {
     const o = orders.find(function (x) { return x.id === orderId; });
@@ -499,15 +587,22 @@
     if (!o) return;
     const tpl = document.getElementById('invoiceTemplate');
     tpl.innerHTML = buildInvoiceHtml(o);
-    // نستنى دورة رسم وحدة (المتصفح يحتاج وقت يرسم المحتوى المُدرَج توًا
-    // قبل ما html2canvas يلتقطه — هذا سبب الفاتورة الفاضية سابقًا).
+
+    // نعرضها فعليًا على الشاشة (خلف طبقة نافذة التفاصيل، ما يشوفها المستخدم)
+    // لأن هذا الأسلوب الوحيد المضمون 100% — المتصفح يرسمها فعليًا.
+    tpl.style.opacity = '1';
+    tpl.style.zIndex = '5';
+
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         html2pdf().from(tpl).set({
           filename: 'فاتورة-' + 'P-' + String(o.id).padStart(4, '0') + '.pdf',
           margin: 0,
-          html2canvas: { scale: 2, windowWidth: 380 },
-        }).save();
+          html2canvas: { scale: 2 },
+        }).save().then(function () {
+          tpl.style.opacity = '0.01';
+          tpl.style.zIndex = '-1';
+        });
       });
     });
   }
