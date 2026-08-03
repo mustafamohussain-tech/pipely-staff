@@ -6,6 +6,7 @@
 <title>لوحة الموظفين — Pipely</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root{
     --bg:#f7f5fb;--card:#fff;--line:#e7e1f2;
@@ -117,10 +118,9 @@
   .print-btn{width:100%;margin-top:10px;background:var(--accent-dark);color:#fff;border:none;padding:12px;
     border-radius:12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
 
-  #invoiceTemplate{position:fixed;top:0;left:0;width:380px;background:#fff;padding:28px;
-    opacity:0.01;pointer-events:none;z-index:-1;
+  #invoiceTemplate{width:100%;background:#fff;border-radius:16px;
     font-family:'Cairo',Tahoma,sans-serif;direction:rtl}
-  .inv-header{text-align:center;border-bottom:2px solid var(--accent);padding-bottom:14px;margin-bottom:16px}
+  .inv-header{position:relative;text-align:center;border-bottom:2px solid var(--accent);padding-bottom:14px;margin-bottom:16px}
   .inv-brand{font-size:18px;font-weight:800;color:var(--accent-dark)}
   .inv-title{font-size:12px;color:var(--text-mute);margin-top:2px}
   .inv-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:14px}
@@ -229,7 +229,14 @@
   <div class="modal" id="detailModal"></div>
 </div>
 
-<div id="invoiceTemplate"></div>
+<div class="overlay" id="invoiceOverlay" onclick="if(event.target===this)closeInvoicePreview()">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeInvoicePreview()">✕</button>
+    <div style="clear:both;"></div>
+    <div id="invoiceTemplate"></div>
+    <button class="print-btn" onclick="downloadInvoicePdf()" style="margin-top:14px;">تحميل PDF</button>
+  </div>
+</div>
 
 <audio id="alertSound" preload="auto">
   <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=" type="audio/wav">
@@ -566,6 +573,8 @@
       });
   }
 
+  const STOREFRONT_URL = 'https://mustafamohussain-tech.github.io/pipely-storefront/';
+
   function buildInvoiceHtml(order) {
     const code = 'P-' + String(order.id).padStart(4, '0');
     const dateStr = new Date().toLocaleDateString('ar-IQ');
@@ -573,7 +582,8 @@
       return '<tr><td>' + (i.sku || '-') + '</td><td>' + i.productName + '</td><td>' + i.quantity + '</td></tr>';
     }).join('');
     return '' +
-      '<div class="inv-header"><div class="inv-brand">Pipely</div><div class="inv-title">فاتورة شراء</div></div>' +
+      '<div class="inv-header"><div id="invoiceQr" style="position:absolute;top:0;right:0;width:56px;height:56px;"></div>' +
+      '<div class="inv-brand">Pipely</div><div class="inv-title">فاتورة شراء</div></div>' +
       '<div class="inv-meta"><span>رقم الطلب: ' + code + '</span><span>التاريخ: ' + dateStr + '</span></div>' +
       '<div class="inv-block"><b>' + order.customerName + '</b><br>Tel: ' + order.phone +
       (order.address ? '<br>العنوان: ' + order.address : '') + '</div>' +
@@ -582,29 +592,32 @@
       '<div class="inv-total"><span>المجموع</span><span>' + Number(order.total).toLocaleString() + ' د.ع</span></div>';
   }
 
+  let currentInvoiceOrder = null;
+
   function printInvoice(orderId) {
     const o = orders.find(function (x) { return x.id === orderId; });
     if (!o) return;
+    currentInvoiceOrder = o;
+    document.getElementById('invoiceTemplate').innerHTML = buildInvoiceHtml(o);
+    try {
+      const trackUrl = STOREFRONT_URL + '?track=' + encodeURIComponent('P-' + String(o.id).padStart(4, '0'));
+      new QRCode(document.getElementById('invoiceQr'), { text: trackUrl, width: 56, height: 56, colorDark: '#241f38' });
+    } catch (e) { /* لو تعذر توليد الـQR، الفاتورة تبقى تشتغل عادي بدونه */ }
+    document.getElementById('invoiceOverlay').classList.add('open');
+  }
+
+  function closeInvoicePreview() {
+    document.getElementById('invoiceOverlay').classList.remove('open');
+  }
+
+  function downloadInvoicePdf() {
+    if (!currentInvoiceOrder) return;
     const tpl = document.getElementById('invoiceTemplate');
-    tpl.innerHTML = buildInvoiceHtml(o);
-
-    // نعرضها فعليًا على الشاشة (خلف طبقة نافذة التفاصيل، ما يشوفها المستخدم)
-    // لأن هذا الأسلوب الوحيد المضمون 100% — المتصفح يرسمها فعليًا.
-    tpl.style.opacity = '1';
-    tpl.style.zIndex = '5';
-
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        html2pdf().from(tpl).set({
-          filename: 'فاتورة-' + 'P-' + String(o.id).padStart(4, '0') + '.pdf',
-          margin: 0,
-          html2canvas: { scale: 2 },
-        }).save().then(function () {
-          tpl.style.opacity = '0.01';
-          tpl.style.zIndex = '-1';
-        });
-      });
-    });
+    html2pdf().from(tpl).set({
+      filename: 'فاتورة-' + 'P-' + String(currentInvoiceOrder.id).padStart(4, '0') + '.pdf',
+      margin: 8,
+      html2canvas: { scale: 2 },
+    }).save();
   }
 
   function loadInventory() {
