@@ -14,7 +14,7 @@
     --text:#241f38;--text-dim:#6b6480;--text-mute:#9992ad;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:78px}
+  body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:70px}
 
   .topbar{background:linear-gradient(120deg,var(--accent),var(--accent-dark));color:#fff;padding:16px 18px;
     display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
@@ -51,7 +51,8 @@
   .col{min-width:260px;background:#efeaf7;border-radius:16px;padding:12px;max-height:calc(100vh - 170px);
     display:flex;flex-direction:column}
   .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px}
-  .col-title{font-size:12.5px;font-weight:800}
+  .col-title{font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:6px}
+  .col-ic{width:15px;height:15px;flex-shrink:0}
   .col-count{background:#fff;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;color:var(--text-dim)}
   .col-body{overflow-y:auto;flex:1}
   .empty-col{text-align:center;font-size:11px;color:var(--text-mute);padding:20px 10px}
@@ -161,13 +162,13 @@
 
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
-    <div class="login-logo">👤 Pipely — دخول الموظفين</div>
+    <div class="login-logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="vertical-align:-4px;margin-left:4px;"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20c0-3.9 3.4-7 7.5-7s7.5 3.1 7.5 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Pipely — دخول الموظفين</div>
     <div class="login-sub">لكل موظف حسابه الخاص</div>
     <label for="staffUsername">اسم المستخدم</label>
     <input type="text" id="staffUsername" placeholder="اسم المستخدم">
     <label for="staffPassword">كلمة المرور</label>
     <input type="password" id="staffPassword" placeholder="كلمة المرور">
-    <button class="login-btn" id="staffLoginBtn" onclick="staffLogin()">🔓 تسجيل الدخول</button>
+    <button class="login-btn" id="staffLoginBtn" onclick="staffLogin()">تسجيل الدخول</button>
     <div class="login-msg" id="loginMsg"></div>
   </div>
 </div>
@@ -182,8 +183,8 @@
     </nav>
     <div class="top-right">
       <span class="badge" id="badge">0</span>
-      <button class="sound-toggle" id="soundBtn" onclick="toggleSound()">🔇</button>
-      <button class="refresh-btn" onclick="loadOrders()">🔄 تحديث</button>
+      <button class="sound-toggle" id="soundBtn" onclick="toggleSound()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" id="soundIcon"><path d="M4 10v4h3.5l4 3.5v-11l-4 3.5H4z" fill="currentColor"/><path d="M16 9a4.5 4.5 0 010 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundWave1"/><path d="M18.5 6.5a8 8 0 010 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundWave2" style="display:none;"/><line x1="15" y1="9" x2="20" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundMuteLine"/><line x1="20" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundMuteLine2"/></svg></button>
+      <button class="refresh-btn" onclick="loadOrders()">تحديث</button>
     </div>
   </div>
 
@@ -200,7 +201,7 @@
       <div class="acc-card">
         <div class="acc-avatar" id="accAvatar"></div>
         <div class="acc-name" id="accName"></div>
-        <button class="acc-logout" onclick="staffLogout()">🚪 تسجيل الخروج</button>
+        <button class="acc-logout" onclick="staffLogout()">تسجيل الخروج</button>
       </div>
     </div>
   </div>
@@ -234,12 +235,19 @@
 <script>
   const API_URL = 'https://pipely-api.mustafa-mo-hussain.workers.dev';
   const STAFF_SESSION_KEY = 'pipely_staff_session';
+  const ICONS = {
+    new: '<svg class="col-ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    prep: '<svg class="col-ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    ready: '<svg class="col-ic" viewBox="0 0 24 24" fill="none"><path d="M3.5 8L12 4l8.5 4-8.5 4-8.5-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3.5 8v8l8.5 4 8.5-4V8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    done: '<svg class="col-ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M8 12.5l2.5 2.5L16 9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    problem: '<svg class="col-ic" viewBox="0 0 24 24" fill="none"><path d="M12 3.5L21.5 20h-19L12 3.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9.5v4.5M12 16.5h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  };
   const COLUMNS = [
-    { key: '🆕 طلب جديد', label: '🆕 طلب جديد', cls: 'c-new' },
-    { key: '⚙️ جاري التجهيز', label: '⚙️ جاري التجهيز', cls: 'c-prep' },
-    { key: '📦 جاهز للتسليم', label: '📦 جاهز للتسليم', cls: 'c-ready' },
-    { key: '✅ تم الاستلام والدفع', label: '✅ تم الاستلام والدفع', cls: 'c-done' },
-    { key: '🚫 مشكلة بالطلب', label: '🚫 مشكلة بالطلب', cls: 'c-problem' },
+    { key: '🆕 طلب جديد', label: 'طلب جديد', cls: 'c-new', ic: ICONS.new },
+    { key: '⚙️ جاري التجهيز', label: 'جاري التجهيز', cls: 'c-prep', ic: ICONS.prep },
+    { key: '📦 جاهز للتسليم', label: 'جاهز للتسليم', cls: 'c-ready', ic: ICONS.ready },
+    { key: '✅ تم الاستلام والدفع', label: 'تم الاستلام والدفع', cls: 'c-done', ic: ICONS.done },
+    { key: '🚫 مشكلة بالطلب', label: 'مشكلة بالطلب', cls: 'c-problem', ic: ICONS.problem },
   ];
 
   let orders = [];
@@ -269,7 +277,7 @@
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول';
+        btn.disabled = false; btn.textContent = 'تسجيل الدخول';
         if (data.result === 'success') {
           try { localStorage.setItem(STAFF_SESSION_KEY, JSON.stringify({ username: username, staffName: data.staffName })); } catch (e) {}
           enterApp();
@@ -279,7 +287,7 @@
         }
       })
       .catch(function () {
-        btn.disabled = false; btn.textContent = '🔓 تسجيل الدخول';
+        btn.disabled = false; btn.textContent = 'تسجيل الدخول';
         msg.textContent = 'تعذر الاتصال بالخادم';
         msg.style.display = 'block';
       });
@@ -317,7 +325,9 @@
 
   function toggleSound() {
     soundOn = !soundOn;
-    document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+    document.getElementById('soundWave2').style.display = soundOn ? 'block' : 'none';
+    document.getElementById('soundMuteLine').style.display = soundOn ? 'none' : 'block';
+    document.getElementById('soundMuteLine2').style.display = soundOn ? 'none' : 'block';
     if (soundOn) {
       const a = document.getElementById('alertSound');
       a.play().then(function () { a.pause(); a.currentTime = 0; }).catch(function () {});
@@ -358,7 +368,7 @@
       const colEl = document.createElement('div');
       colEl.className = 'col';
       colEl.innerHTML =
-        '<div class="col-head"><span class="col-title">' + col.label + '</span><span class="col-count">' + colOrders.length + '</span></div>' +
+        '<div class="col-head"><span class="col-title">' + col.ic + col.label + '</span><span class="col-count">' + colOrders.length + '</span></div>' +
         '<div class="col-body" id="colBody_' + col.cls + '"></div>';
       board.appendChild(colEl);
 
@@ -378,7 +388,7 @@
         card.innerHTML =
           '<div class="ocode">P-' + String(o.id).padStart(4, '0') + '</div>' +
           '<div class="oname">' + o.customerName + '</div>' +
-          '<div class="ophone">📞 ' + o.phone + '</div>' +
+          '<div class="ophone"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block;"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2C10 19 5 14 3 8a2 2 0 012-2 2 2 0 011-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> ' + o.phone + '</div>' +
           (itemsText ? '<div class="oitems">' + itemsText + '</div>' : '') +
           '<div class="oprice">' + Number(o.total).toLocaleString() + ' د.ع</div>' +
           '<div class="quick-move-row">' +
@@ -405,9 +415,9 @@
       '<h2 style="font-size:16px;font-weight:800;margin-top:10px;">P-' + String(o.id).padStart(4, '0') + '</h2>' +
       '<p style="font-size:13px;color:var(--text-dim);margin-top:4px;">' + o.status + '</p>' +
       '<div style="background:var(--bg);border-radius:12px;padding:12px;margin-top:14px;font-size:12.5px;line-height:1.9;">' +
-      '<b>' + o.customerName + '</b><br>📞 ' + o.phone +
-      (o.address ? '<br>📍 ' + o.address : '') +
-      (o.notes ? '<br>📝 ' + o.notes : '') +
+      '<b>' + o.customerName + '</b><br><svg width="10" height="10" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block;"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2C10 19 5 14 3 8a2 2 0 012-2 2 2 0 011-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> ' + o.phone +
+      (o.address ? '<br>العنوان: ' + o.address : '') +
+      (o.notes ? '<br>ملاحظات: ' + o.notes : '') +
       '</div>' +
       '<div style="margin-top:14px;">' + itemsHtml + '</div>' +
       '<div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid var(--line);font-weight:800;">' +
@@ -417,8 +427,8 @@
       '<select id="statusSelect" style="width:100%;padding:11px;border-radius:12px;border:1px solid var(--line);margin-top:6px;font-family:inherit;font-size:13px;">' +
       COLUMNS.map(function (c) { return '<option value="' + c.key + '" ' + (c.key === o.status ? 'selected' : '') + '>' + c.label + '</option>'; }).join('') +
       '</select>' +
-      '<button onclick="saveStatus(' + o.id + ')" style="width:100%;margin-top:10px;background:var(--accent);color:#fff;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 حفظ الحالة</button>' +
-      '<button class="print-btn" onclick="printInvoice(' + o.id + ')">🖨️ طباعة الفاتورة (PDF)</button>' +
+      '<button onclick="saveStatus(' + o.id + ')" style="width:100%;margin-top:10px;background:var(--accent);color:#fff;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">حفظ الحالة</button>' +
+      '<button class="print-btn" onclick="printInvoice(' + o.id + ')">طباعة الفاتورة (PDF)</button>' +
       '</div>';
 
     document.getElementById('detailOverlay').classList.add('open');
@@ -476,8 +486,8 @@
     return '' +
       '<div class="inv-header"><div class="inv-brand">Pipely</div><div class="inv-title">فاتورة شراء</div></div>' +
       '<div class="inv-meta"><span>رقم الطلب: ' + code + '</span><span>التاريخ: ' + dateStr + '</span></div>' +
-      '<div class="inv-block"><b>' + order.customerName + '</b><br>📞 ' + order.phone +
-      (order.address ? '<br>📍 ' + order.address : '') + '</div>' +
+      '<div class="inv-block"><b>' + order.customerName + '</b><br>Tel: ' + order.phone +
+      (order.address ? '<br>العنوان: ' + order.address : '') + '</div>' +
       '<table class="inv-table"><thead><tr><th>الكود</th><th>المنتج</th><th>الكمية</th></tr></thead>' +
       '<tbody>' + itemsRows + '</tbody></table>' +
       '<div class="inv-total"><span>المجموع</span><span>' + Number(order.total).toLocaleString() + ' د.ع</span></div>';
@@ -518,7 +528,7 @@
             '<div class="inv-stock">' + p.stock + ' قطعة</div></div>' +
             '<div class="inv-actions">' +
             '<button class="inv-btn add" onclick="addStockPrompt(' + p.id + ',\'' + p.name.replace(/'/g, "") + '\')">+ إدخال مخزون</button>' +
-            '<button class="inv-btn set" onclick="setStockPrompt(' + p.id + ',' + p.stock + ')">✏️ تعديل يدوي</button>' +
+            '<button class="inv-btn set" onclick="setStockPrompt(' + p.id + ',' + p.stock + ')">تعديل يدوي</button>' +
             '</div>';
           wrap.appendChild(card);
         });
