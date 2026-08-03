@@ -220,7 +220,8 @@
 
   <div class="tab-view" id="inventoryView" style="display:none;">
     <div class="inv-header-bar">
-      <button class="add-product-btn" onclick="openProductForm(null)">+ أضف منتج جديد</button>
+      <button class="add-product-btn" onclick="openProductForm(null)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:-3px;margin-left:5px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>أضف منتج جديد</button>
     </div>
     <div class="inv-wrap" id="invWrap"></div>
   </div>
@@ -230,7 +231,8 @@
       <div class="cust-search-card">
         <label for="custSearchInput">رقم هاتف الزبون أو رقم الزبون (مثال: C-0001)</label>
         <input type="text" id="custSearchInput" placeholder="07xxxxxxxxx أو C-0001">
-        <button class="submit-btn" onclick="searchCustomer()">بحث</button>
+        <button class="submit-btn" onclick="searchCustomer()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="vertical-align:-3px;margin-left:6px;"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>بحث</button>
       </div>
       <div id="custResult"></div>
     </div>
@@ -301,7 +303,8 @@
     <label class="pf-label">الصور</label>
     <div class="pf-images" id="pfImagesPreview"></div>
     <input type="file" id="pfImageInput" accept="image/*" multiple style="display:none;" onchange="onProductImagesSelected(event)">
-    <button class="pf-upload-btn" onclick="document.getElementById('pfImageInput').click();">+ رفع صورة</button>
+    <button class="pf-upload-btn" onclick="document.getElementById('pfImageInput').click();">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:-2px;margin-left:5px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>رفع صورة</button>
 
     <div class="msg" id="pfMsg" style="display:none;"></div>
     <button class="submit-btn" id="pfSaveBtn" style="margin-top:14px;" onclick="saveProductForm()">حفظ المنتج</button>
@@ -334,8 +337,26 @@
   let soundOn = false;
   let lastNewCount = 0;
 
+  // أي نص يجي من الزبون (اسم، عنوان، ملاحظات...) لازم يمرّ من هذي الدالة
+  // قبل ما يدخل الصفحة — يمنع حقن أكواد ضارة بمتصفح الموظف.
+  function escapeHtml_(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function getStaffSession() {
     try { return JSON.parse(localStorage.getItem(STAFF_SESSION_KEY) || 'null'); } catch (e) { return null; }
+  }
+
+  function authHeaders() {
+    const s = getStaffSession();
+    if (!s) return {};
+    return { 'X-Staff-Token': s.token || '' };
   }
 
   function staffLogin() {
@@ -359,7 +380,9 @@
       .then(function (data) {
         btn.disabled = false; btn.textContent = 'تسجيل الدخول';
         if (data.result === 'success') {
-          try { localStorage.setItem(STAFF_SESSION_KEY, JSON.stringify({ username: username, staffName: data.staffName })); } catch (e) {}
+          // نحفظ توكن الجلسة بس — كلمة المرور نفسها ما تبقى محفوظة بالجهاز
+          // (نفس مبدأ الجلسات المؤقتة اللي تستخدمه أنظمة زي Salesforce/Odoo).
+          try { localStorage.setItem(STAFF_SESSION_KEY, JSON.stringify({ username: username, token: data.token, staffName: data.staffName })); } catch (e) {}
           enterApp();
         } else {
           msg.textContent = data.error || 'بيانات الدخول غير صحيحة';
@@ -423,8 +446,11 @@
   }
 
   function loadOrders() {
-    fetch(API_URL + '/all-orders')
-      .then(function (res) { return res.json(); })
+    fetch(API_URL + '/all-orders', { headers: authHeaders() })
+      .then(function (res) {
+        if (res.status === 401) { staffLogout(); throw new Error('session-expired'); }
+        return res.json();
+      })
       .then(function (data) {
         if (data.result !== 'success') return;
         const newOrders = data.orders || [];
@@ -465,14 +491,14 @@
         card.className = 'ocard ' + col.cls;
         card.setAttribute('data-order-id', o.id);
         card.onclick = function () { if (!justDragged) openDetail(o.id); };
-        const itemsText = (o.items || []).map(function (i) { return i.productName + ' ×' + i.quantity; }).join('<br>');
+        const itemsText = (o.items || []).map(function (i) { return escapeHtml_(i.productName) + ' ×' + i.quantity; }).join('<br>');
         const colIndex = COLUMNS.findIndex(function (c) { return c.key === col.key; });
         const prevCol = COLUMNS[colIndex - 1];
         const nextCol = COLUMNS[colIndex + 1];
         card.innerHTML =
           '<div class="ocode">P-' + String(o.id).padStart(4, '0') + '</div>' +
-          '<div class="oname">' + o.customerName + '</div>' +
-          '<div class="ophone"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block;"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2C10 19 5 14 3 8a2 2 0 012-2 2 2 0 011-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> ' + o.phone + '</div>' +
+          '<div class="oname">' + escapeHtml_(o.customerName) + '</div>' +
+          '<div class="ophone"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block;"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2C10 19 5 14 3 8a2 2 0 012-2 2 2 0 011-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> ' + escapeHtml_(o.phone) + '</div>' +
           (itemsText ? '<div class="oitems">' + itemsText + '</div>' : '') +
           '<div class="oprice">' + Number(o.total).toLocaleString() + ' د.ع</div>' +
           '<div class="quick-move-row">' +
@@ -574,7 +600,7 @@
     const modal = document.getElementById('detailModal');
     const itemsHtml = (o.items || []).map(function (i) {
       return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px;">' +
-        '<span>' + i.productName + '</span><span style="font-weight:700;">× ' + i.quantity + '</span></div>';
+        '<span>' + escapeHtml_(i.productName) + '</span><span style="font-weight:700;">× ' + i.quantity + '</span></div>';
     }).join('');
 
     modal.innerHTML =
@@ -583,9 +609,9 @@
       '<h2 style="font-size:16px;font-weight:800;margin-top:10px;">P-' + String(o.id).padStart(4, '0') + '</h2>' +
       '<p style="font-size:13px;color:var(--text-dim);margin-top:4px;">' + o.status + '</p>' +
       '<div style="background:var(--bg);border-radius:12px;padding:12px;margin-top:14px;font-size:12.5px;line-height:1.9;">' +
-      '<b>' + o.customerName + '</b><br><svg width="10" height="10" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block;"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2C10 19 5 14 3 8a2 2 0 012-2 2 2 0 011-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> ' + o.phone +
-      (o.address ? '<br>العنوان: ' + o.address : '') +
-      (o.notes ? '<br>ملاحظات: ' + o.notes : '') +
+      '<b>' + escapeHtml_(o.customerName) + '</b><br><svg width="10" height="10" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block;"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2C10 19 5 14 3 8a2 2 0 012-2 2 2 0 011-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> ' + escapeHtml_(o.phone) +
+      (o.address ? '<br>العنوان: ' + escapeHtml_(o.address) : '') +
+      (o.notes ? '<br>ملاحظات: ' + escapeHtml_(o.notes) : '') +
       '</div>' +
       '<div style="margin-top:14px;">' + itemsHtml + '</div>' +
       '<div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid var(--line);font-weight:800;">' +
@@ -608,7 +634,7 @@
 
   function quickMove(orderId, newStatus) {
     fetch(API_URL + '/update-order-status', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
       body: JSON.stringify({ orderId: orderId, status: newStatus }),
     })
       .then(function (res) { return res.json(); })
@@ -626,7 +652,7 @@
     btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
 
     fetch(API_URL + '/update-order-status', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
       body: JSON.stringify({ orderId: orderId, status: newStatus }),
     })
       .then(function (res) { return res.json(); })
@@ -651,14 +677,14 @@
     const code = 'P-' + String(order.id).padStart(4, '0');
     const dateStr = new Date().toLocaleDateString('ar-IQ');
     const itemsRows = (order.items || []).map(function (i) {
-      return '<tr><td>' + (i.sku || '-') + '</td><td>' + i.productName + '</td><td>' + i.quantity + '</td></tr>';
+      return '<tr><td>' + escapeHtml_(i.sku || '-') + '</td><td>' + escapeHtml_(i.productName) + '</td><td>' + i.quantity + '</td></tr>';
     }).join('');
     return '' +
       '<div class="inv-header"><div id="invoiceQr" style="position:absolute;top:0;right:0;width:56px;height:56px;"></div>' +
       '<div class="inv-brand">Pipely</div><div class="inv-title">فاتورة شراء</div></div>' +
       '<div class="inv-meta"><span>رقم الطلب: ' + code + '</span><span>التاريخ: ' + dateStr + '</span></div>' +
-      '<div class="inv-block"><b>' + order.customerName + '</b><br>Tel: ' + order.phone +
-      (order.address ? '<br>العنوان: ' + order.address : '') + '</div>' +
+      '<div class="inv-block"><b>' + escapeHtml_(order.customerName) + '</b><br>Tel: ' + escapeHtml_(order.phone) +
+      (order.address ? '<br>العنوان: ' + escapeHtml_(order.address) : '') + '</div>' +
       '<table class="inv-table"><thead><tr><th>الكود</th><th>المنتج</th><th>الكمية</th></tr></thead>' +
       '<tbody>' + itemsRows + '</tbody></table>' +
       '<div class="inv-total"><span>المجموع</span><span>' + Number(order.total).toLocaleString() + ' د.ع</span></div>' +
@@ -696,7 +722,7 @@
   function loadInventory() {
     const wrap = document.getElementById('invWrap');
     wrap.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
-    fetch(API_URL + '/inventory')
+    fetch(API_URL + '/inventory', { headers: authHeaders() })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (data.result !== 'success') { wrap.innerHTML = '<p>تعذر تحميل المخزون</p>'; return; }
@@ -705,11 +731,11 @@
           const card = document.createElement('div');
           card.className = 'inv-card';
           card.innerHTML =
-            '<div class="inv-info"><div class="inv-name">' + p.name + '</div>' +
+            '<div class="inv-info"><div class="inv-name">' + escapeHtml_(p.name) + '</div>' +
             '<div class="inv-sku">' + (p.sku || 'بدون كود') + '</div>' +
             '<div class="inv-stock">' + p.stock + ' قطعة</div></div>' +
             '<div class="inv-actions">' +
-            '<button class="inv-btn add" onclick="addStockPrompt(' + p.id + ',\'' + p.name.replace(/'/g, "") + '\')">+ إدخال مخزون</button>' +
+            '<button class="inv-btn add" onclick="addStockPrompt(' + p.id + ',\'' + p.name.replace(/'/g, "") + '\')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;margin-left:4px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>إدخال مخزون</button>' +
             '<button class="inv-btn set" onclick="setStockPrompt(' + p.id + ',' + p.stock + ')">تعديل يدوي</button>' +
             '<button class="inv-btn set" onclick="openProductForm(' + p.id + ')">تعديل المنتج</button>' +
             '</div>';
@@ -724,7 +750,7 @@
     const n = parseInt(qty, 10);
     if (!n || n <= 0) return;
     fetch(API_URL + '/add-stock', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
       body: JSON.stringify({ productId: productId, quantity: n }),
     })
       .then(function (res) { return res.json(); })
@@ -737,7 +763,7 @@
     const n = parseInt(qty, 10);
     if (isNaN(n) || n < 0) return;
     fetch(API_URL + '/set-stock', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
       body: JSON.stringify({ productId: productId, quantity: n }),
     })
       .then(function (res) { return res.json(); })
@@ -750,20 +776,20 @@
     const box = document.getElementById('custResult');
     if (!q) return;
     box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;margin-top:12px;">جارٍ البحث...</p>';
-    fetch(API_URL + '/customer-lookup?query=' + encodeURIComponent(q))
+    fetch(API_URL + '/customer-lookup?query=' + encodeURIComponent(q), { headers: authHeaders() })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (data.result !== 'success') { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;margin-top:12px;">' + (data.error || 'ماكو زبون بهذا الرقم') + '</p>'; return; }
         const c = data.customer;
         const ordersHtml = (data.orders || []).map(function (o) {
-          const itemsText = (o.items || []).map(function (i) { return i.productName + ' ×' + i.quantity; }).join('، ');
+          const itemsText = (o.items || []).map(function (i) { return escapeHtml_(i.productName) + ' ×' + i.quantity; }).join('، ');
           return '<div class="cust-order-row"><div><b>' + o.code + '</b><br><span style="color:var(--text-mute);font-size:10.5px;">' + (itemsText || 'ماكو تفاصيل') + '</span></div>' +
             '<div style="text-align:left;"><div>' + Number(o.total).toLocaleString() + ' د.ع</div><span style="font-size:10px;color:var(--text-mute);">' + o.status.replace(/^\S+\s/, '') + '</span></div></div>';
         }).join('') || '<p style="color:var(--text-mute);font-size:12px;">ماكو طلبات سابقة</p>';
 
         box.innerHTML = '<div class="cust-info-card">' +
-          '<div style="font-size:15px;font-weight:800;">' + c.name + '</div>' +
-          '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + c.phone + ' — رقم الزبون: ' + c.code + '</div>' +
+          '<div style="font-size:15px;font-weight:800;">' + escapeHtml_(c.name) + '</div>' +
+          '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + escapeHtml_(c.phone) + ' — رقم الزبون: ' + escapeHtml_(c.code) + '</div>' +
           '<div style="margin-top:12px;">' + ordersHtml + '</div></div>';
       })
       .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>'; });
@@ -833,7 +859,7 @@
     const uploads = files.map(function (file) {
       const form = new FormData();
       form.append('file', file, file.name);
-      return fetch(API_URL + '/upload-product-image', { method: 'POST', body: form }).then(function (res) { return res.json(); });
+      return fetch(API_URL + '/upload-product-image', { method: 'POST', headers: authHeaders(), body: form }).then(function (res) { return res.json(); });
     });
 
     Promise.all(uploads).then(function (results) {
@@ -869,7 +895,7 @@
     btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
 
     fetch(API_URL + endpoint, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
       body: JSON.stringify(payload),
     })
       .then(function (res) { return res.json(); })
