@@ -92,6 +92,28 @@
   .inv-btn.set{background:rgba(124,92,255,.12);color:var(--accent-dark)}
 
   .acc-wrap{padding:20px;max-width:400px;margin:0 auto;text-align:center}
+
+  .inv-header-bar{padding:16px 16px 0;max-width:600px;margin:0 auto}
+  .add-product-btn{width:100%;background:var(--accent);color:#fff;border:none;padding:12px;
+    border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+
+  .cust-wrap{padding:16px;max-width:500px;margin:0 auto}
+  .cust-search-card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 6px 16px -12px rgba(0,0,0,.15)}
+  .cust-search-card label{display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px}
+  .cust-search-card input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;
+    font-size:13px;font-family:inherit;margin-bottom:12px}
+  .cust-info-card{background:#fff;border-radius:16px;padding:18px;margin-top:14px;box-shadow:0 6px 16px -12px rgba(0,0,0,.15)}
+  .cust-order-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;
+    border-bottom:1px solid var(--line);font-size:12.5px}
+
+  .pf-label{display:block;font-size:11.5px;font-weight:700;color:var(--text-dim);margin:12px 0 5px}
+  .pf-input{width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:14px;
+    font-size:13px;font-family:inherit;background:var(--bg)}
+  .pf-images{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .pf-images img{width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
+  .pf-upload-btn{margin-top:8px;background:rgba(124,92,255,.1);color:var(--accent-dark);border:none;
+    padding:9px 16px;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+
   .acc-card{background:#fff;border-radius:18px;padding:24px;box-shadow:0 10px 25px -16px rgba(0,0,0,.15)}
   .acc-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(120deg,var(--accent),var(--accent-dark));
     color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin:0 auto 14px}
@@ -182,6 +204,7 @@
     <nav class="desktop-nav">
       <button class="desktop-nav-btn on" id="dnavKanban" onclick="switchStaffTab('kanban')">حالة الزبائن</button>
       <button class="desktop-nav-btn" id="dnavInventory" onclick="switchStaffTab('inventory')">المخزون</button>
+      <button class="desktop-nav-btn" id="dnavCustomers" onclick="switchStaffTab('customers')">الزبائن</button>
       <button class="desktop-nav-btn" id="dnavAccount" onclick="switchStaffTab('account')">حسابي</button>
     </nav>
     <div class="top-right">
@@ -196,7 +219,21 @@
   </div>
 
   <div class="tab-view" id="inventoryView" style="display:none;">
+    <div class="inv-header-bar">
+      <button class="add-product-btn" onclick="openProductForm(null)">+ أضف منتج جديد</button>
+    </div>
     <div class="inv-wrap" id="invWrap"></div>
+  </div>
+
+  <div class="tab-view" id="customersView" style="display:none;">
+    <div class="cust-wrap">
+      <div class="cust-search-card">
+        <label for="custSearchInput">رقم هاتف الزبون أو رقم الزبون (مثال: C-0001)</label>
+        <input type="text" id="custSearchInput" placeholder="07xxxxxxxxx أو C-0001">
+        <button class="submit-btn" onclick="searchCustomer()">بحث</button>
+      </div>
+      <div id="custResult"></div>
+    </div>
   </div>
 
   <div class="tab-view" id="accountView" style="display:none;">
@@ -218,6 +255,10 @@
       <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><path d="M3.5 8L12 4l8.5 4-8.5 4-8.5-4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8v8l8.5 4 8.5-4V8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       <span class="nav-label">المخزون</span>
     </button>
+    <button class="nav-btn" id="navCustomers" onclick="switchStaffTab('customers')">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 20c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="8.5" r="2.3" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 14.3c2.5.3 4.5 2.3 4.5 4.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="nav-label">الزبائن</span>
+    </button>
     <button class="nav-btn" id="navAccount2" onclick="switchStaffTab('account')">
       <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.3" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       <span class="nav-label">حسابي</span>
@@ -235,6 +276,35 @@
     <div style="clear:both;"></div>
     <div id="invoiceTemplate"></div>
     <button class="print-btn" onclick="downloadInvoicePdf()" style="margin-top:14px;">تحميل PDF</button>
+  </div>
+</div>
+
+<div class="overlay" id="productFormOverlay" onclick="if(event.target===this)closeProductForm()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeProductForm()">✕</button>
+    <div style="clear:both;"></div>
+    <h2 id="productFormTitle" style="font-size:16px;font-weight:800;margin-top:10px;">أضف منتج جديد</h2>
+
+    <label class="pf-label">اسم المنتج</label>
+    <input type="text" id="pfName" class="pf-input">
+    <label class="pf-label">السعر (د.ع)</label>
+    <input type="number" id="pfPrice" class="pf-input">
+    <label class="pf-label">الوصف</label>
+    <textarea id="pfDescription" class="pf-input" rows="3"></textarea>
+    <label class="pf-label">الفئة</label>
+    <input type="text" id="pfCategory" class="pf-input">
+    <label class="pf-label">SKU (كود المنتج)</label>
+    <input type="text" id="pfSku" class="pf-input">
+    <label class="pf-label" id="pfStockLabel">الكمية الأولية</label>
+    <input type="number" id="pfStock" class="pf-input">
+
+    <label class="pf-label">الصور</label>
+    <div class="pf-images" id="pfImagesPreview"></div>
+    <input type="file" id="pfImageInput" accept="image/*" multiple style="display:none;" onchange="onProductImagesSelected(event)">
+    <button class="pf-upload-btn" onclick="document.getElementById('pfImageInput').click();">+ رفع صورة</button>
+
+    <div class="msg" id="pfMsg" style="display:none;"></div>
+    <button class="submit-btn" id="pfSaveBtn" style="margin-top:14px;" onclick="saveProductForm()">حفظ المنتج</button>
   </div>
 </div>
 
@@ -321,14 +391,16 @@
   }
 
   function switchStaffTab(tab) {
-    ['kanban', 'inventory', 'account'].forEach(function (t) {
+    ['kanban', 'inventory', 'customers', 'account'].forEach(function (t) {
       document.getElementById(t + 'View').style.display = (t === tab) ? 'block' : 'none';
     });
     document.getElementById('navKanban').classList.toggle('on', tab === 'kanban');
     document.getElementById('navInventory').classList.toggle('on', tab === 'inventory');
+    document.getElementById('navCustomers').classList.toggle('on', tab === 'customers');
     document.getElementById('navAccount2').classList.toggle('on', tab === 'account');
     document.getElementById('dnavKanban').classList.toggle('on', tab === 'kanban');
     document.getElementById('dnavInventory').classList.toggle('on', tab === 'inventory');
+    document.getElementById('dnavCustomers').classList.toggle('on', tab === 'customers');
     document.getElementById('dnavAccount').classList.toggle('on', tab === 'account');
     if (tab === 'inventory') loadInventory();
   }
@@ -589,7 +661,8 @@
       (order.address ? '<br>العنوان: ' + order.address : '') + '</div>' +
       '<table class="inv-table"><thead><tr><th>الكود</th><th>المنتج</th><th>الكمية</th></tr></thead>' +
       '<tbody>' + itemsRows + '</tbody></table>' +
-      '<div class="inv-total"><span>المجموع</span><span>' + Number(order.total).toLocaleString() + ' د.ع</span></div>';
+      '<div class="inv-total"><span>المجموع</span><span>' + Number(order.total).toLocaleString() + ' د.ع</span></div>' +
+      '<div style="margin-top:10px;font-size:10.5px;color:var(--text-mute);text-align:center;">طريقة الدفع: الدفع عند الاستلام</div>';
   }
 
   let currentInvoiceOrder = null;
@@ -599,11 +672,11 @@
     if (!o) return;
     currentInvoiceOrder = o;
     document.getElementById('invoiceTemplate').innerHTML = buildInvoiceHtml(o);
+    document.getElementById('invoiceOverlay').classList.add('open');
     try {
       const trackUrl = STOREFRONT_URL + '?track=' + encodeURIComponent('P-' + String(o.id).padStart(4, '0'));
       new QRCode(document.getElementById('invoiceQr'), { text: trackUrl, width: 56, height: 56, colorDark: '#241f38' });
     } catch (e) { /* لو تعذر توليد الـQR، الفاتورة تبقى تشتغل عادي بدونه */ }
-    document.getElementById('invoiceOverlay').classList.add('open');
   }
 
   function closeInvoicePreview() {
@@ -638,6 +711,7 @@
             '<div class="inv-actions">' +
             '<button class="inv-btn add" onclick="addStockPrompt(' + p.id + ',\'' + p.name.replace(/'/g, "") + '\')">+ إدخال مخزون</button>' +
             '<button class="inv-btn set" onclick="setStockPrompt(' + p.id + ',' + p.stock + ')">تعديل يدوي</button>' +
+            '<button class="inv-btn set" onclick="openProductForm(' + p.id + ')">تعديل المنتج</button>' +
             '</div>';
           wrap.appendChild(card);
         });
@@ -668,6 +742,150 @@
     })
       .then(function (res) { return res.json(); })
       .then(function () { loadInventory(); });
+  }
+
+  // ===================== بحث الزبائن =====================
+  function searchCustomer() {
+    const q = document.getElementById('custSearchInput').value.trim();
+    const box = document.getElementById('custResult');
+    if (!q) return;
+    box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;margin-top:12px;">جارٍ البحث...</p>';
+    fetch(API_URL + '/customer-lookup?query=' + encodeURIComponent(q))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success') { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;margin-top:12px;">' + (data.error || 'ماكو زبون بهذا الرقم') + '</p>'; return; }
+        const c = data.customer;
+        const ordersHtml = (data.orders || []).map(function (o) {
+          const itemsText = (o.items || []).map(function (i) { return i.productName + ' ×' + i.quantity; }).join('، ');
+          return '<div class="cust-order-row"><div><b>' + o.code + '</b><br><span style="color:var(--text-mute);font-size:10.5px;">' + (itemsText || 'ماكو تفاصيل') + '</span></div>' +
+            '<div style="text-align:left;"><div>' + Number(o.total).toLocaleString() + ' د.ع</div><span style="font-size:10px;color:var(--text-mute);">' + o.status.replace(/^\S+\s/, '') + '</span></div></div>';
+        }).join('') || '<p style="color:var(--text-mute);font-size:12px;">ماكو طلبات سابقة</p>';
+
+        box.innerHTML = '<div class="cust-info-card">' +
+          '<div style="font-size:15px;font-weight:800;">' + c.name + '</div>' +
+          '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + c.phone + ' — رقم الزبون: ' + c.code + '</div>' +
+          '<div style="margin-top:12px;">' + ordersHtml + '</div></div>';
+      })
+      .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>'; });
+  }
+
+  // ===================== إضافة/تعديل منتج =====================
+  let editingProductId = null;
+  let productFormImages = [];
+
+  function openProductForm(productId) {
+    editingProductId = productId;
+    productFormImages = [];
+    document.getElementById('pfMsg').style.display = 'none';
+    document.getElementById('pfImagesPreview').innerHTML = '';
+
+    if (!productId) {
+      document.getElementById('productFormTitle').textContent = 'أضف منتج جديد';
+      document.getElementById('pfName').value = '';
+      document.getElementById('pfPrice').value = '';
+      document.getElementById('pfDescription').value = '';
+      document.getElementById('pfCategory').value = '';
+      document.getElementById('pfSku').value = '';
+      document.getElementById('pfStock').value = '';
+      document.getElementById('pfStockLabel').style.display = 'block';
+      document.getElementById('pfStock').style.display = 'block';
+      document.getElementById('productFormOverlay').classList.add('open');
+      return;
+    }
+
+    document.getElementById('productFormTitle').textContent = 'تعديل المنتج';
+    document.getElementById('pfStockLabel').style.display = 'none';
+    document.getElementById('pfStock').style.display = 'none';
+    document.getElementById('productFormOverlay').classList.add('open');
+
+    fetch(API_URL + '/products')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        const p = (data.products || []).find(function (x) { return x.id === productId; });
+        if (!p) return;
+        document.getElementById('pfName').value = p.name || '';
+        document.getElementById('pfPrice').value = p.price || '';
+        document.getElementById('pfDescription').value = p.description || '';
+        document.getElementById('pfCategory').value = p.category || '';
+        document.getElementById('pfSku').value = p.sku || '';
+        productFormImages = p.images || (p.image ? [{ url: p.image }] : []);
+        renderProductImagesPreview();
+      });
+  }
+
+  function closeProductForm() {
+    document.getElementById('productFormOverlay').classList.remove('open');
+  }
+
+  function renderProductImagesPreview() {
+    const box = document.getElementById('pfImagesPreview');
+    box.innerHTML = productFormImages.map(function (img) {
+      return '<img src="' + (img.url || img.signedUrl || '') + '">';
+    }).join('');
+  }
+
+  function onProductImagesSelected(evt) {
+    const files = Array.from(evt.target.files || []);
+    if (files.length === 0) return;
+    const btn = document.querySelector('.pf-upload-btn');
+    btn.disabled = true; btn.textContent = 'جارٍ الرفع...';
+
+    const uploads = files.map(function (file) {
+      const form = new FormData();
+      form.append('file', file, file.name);
+      return fetch(API_URL + '/upload-product-image', { method: 'POST', body: form }).then(function (res) { return res.json(); });
+    });
+
+    Promise.all(uploads).then(function (results) {
+      results.forEach(function (r) { if (r.result === 'success' && r.file) productFormImages.push(r.file); });
+      renderProductImagesPreview();
+      btn.disabled = false; btn.textContent = '+ رفع صورة';
+    });
+  }
+
+  function saveProductForm() {
+    const name = document.getElementById('pfName').value.trim();
+    const price = document.getElementById('pfPrice').value;
+    const msg = document.getElementById('pfMsg');
+    const btn = document.getElementById('pfSaveBtn');
+
+    if (!name || !price) {
+      msg.className = 'msg error'; msg.textContent = 'اسم المنتج والسعر إلزاميين'; msg.style.display = 'block';
+      return;
+    }
+
+    const payload = {
+      name: name,
+      price: price,
+      description: document.getElementById('pfDescription').value.trim(),
+      category: document.getElementById('pfCategory').value.trim(),
+      sku: document.getElementById('pfSku').value.trim(),
+      images: productFormImages,
+    };
+    if (!editingProductId) payload.stock = document.getElementById('pfStock').value || 0;
+    else payload.productId = editingProductId;
+
+    const endpoint = editingProductId ? '/update-product' : '/add-product';
+    btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
+
+    fetch(API_URL + endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        btn.disabled = false; btn.textContent = 'حفظ المنتج';
+        if (data.result === 'success') {
+          closeProductForm();
+          loadInventory();
+        } else {
+          msg.className = 'msg error'; msg.textContent = data.error || 'حدث خطأ، حاول مرة ثانية'; msg.style.display = 'block';
+        }
+      })
+      .catch(function () {
+        btn.disabled = false; btn.textContent = 'حفظ المنتج';
+        msg.className = 'msg error'; msg.textContent = 'تعذر الاتصال بالخادم'; msg.style.display = 'block';
+      });
   }
 
   (function init() {
