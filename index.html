@@ -126,6 +126,35 @@
   .inv-table td{border-bottom:1px solid var(--line);padding:8px 4px}
   .inv-total{display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;
     border-top:2px solid var(--accent);font-weight:800;font-size:14px}
+
+  /* ===================================================================
+     التكيّف مع شاشات الحاسوب — يفعّل تلقائيًا فوق 900px عرض الشاشة
+     =================================================================== */
+  .desktop-nav{display:none}
+
+  @media (min-width: 900px) {
+    body{padding-bottom:0}
+
+    .topbar{padding:16px 32px}
+    .desktop-nav{display:flex;gap:6px}
+    .desktop-nav-btn{background:none;border:none;color:rgba(255,255,255,.85);font-size:13px;font-weight:700;
+      padding:9px 16px;border-radius:20px;cursor:pointer;font-family:inherit}
+    .desktop-nav-btn.on{background:rgba(255,255,255,.2);color:#fff}
+    .desktop-nav-btn:hover{background:rgba(255,255,255,.12)}
+
+    .bottom-nav{display:none}
+
+    .board{padding:24px 32px;justify-content:flex-start;flex-wrap:nowrap}
+    .col{min-width:0;flex:1;max-width:320px;max-height:calc(100vh - 110px)}
+
+    .inv-wrap{max-width:1100px;margin:0 auto;padding:24px 32px;display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:14px}
+    .inv-card{margin-bottom:0}
+
+    .acc-wrap{padding-top:60px}
+
+    .modal{max-width:460px}
+  }
 </style>
 </head>
 <body>
@@ -146,6 +175,11 @@
 <div id="appContent">
   <div class="topbar">
     <div class="logo"><span class="dot"></span> لوحة الموظفين</div>
+    <nav class="desktop-nav">
+      <button class="desktop-nav-btn on" id="dnavKanban" onclick="switchStaffTab('kanban')">حالة الزبائن</button>
+      <button class="desktop-nav-btn" id="dnavInventory" onclick="switchStaffTab('inventory')">المخزون</button>
+      <button class="desktop-nav-btn" id="dnavAccount" onclick="switchStaffTab('account')">حسابي</button>
+    </nav>
     <div class="top-right">
       <span class="badge" id="badge">0</span>
       <button class="sound-toggle" id="soundBtn" onclick="toggleSound()">🔇</button>
@@ -275,6 +309,9 @@
     document.getElementById('navKanban').classList.toggle('on', tab === 'kanban');
     document.getElementById('navInventory').classList.toggle('on', tab === 'inventory');
     document.getElementById('navAccount2').classList.toggle('on', tab === 'account');
+    document.getElementById('dnavKanban').classList.toggle('on', tab === 'kanban');
+    document.getElementById('dnavInventory').classList.toggle('on', tab === 'inventory');
+    document.getElementById('dnavAccount').classList.toggle('on', tab === 'account');
     if (tab === 'inventory') loadInventory();
   }
 
