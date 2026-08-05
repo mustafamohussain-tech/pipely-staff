@@ -274,7 +274,7 @@
 
 <div class="overlay" id="invoiceOverlay" onclick="if(event.target===this)closeInvoicePreview()">
   <div class="modal" style="max-width:420px;">
-    <button class="modal-close" onclick="closeInvoicePreview()">✕</button>
+    <button class="modal-close" onclick="closeInvoicePreview()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     <div style="clear:both;"></div>
     <div id="invoiceTemplate"></div>
     <button class="print-btn" onclick="downloadInvoicePdf()" style="margin-top:14px;">تحميل PDF</button>
@@ -283,7 +283,7 @@
 
 <div class="overlay" id="productFormOverlay" onclick="if(event.target===this)closeProductForm()">
   <div class="modal">
-    <button class="modal-close" onclick="closeProductForm()">✕</button>
+    <button class="modal-close" onclick="closeProductForm()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     <div style="clear:both;"></div>
     <h2 id="productFormTitle" style="font-size:16px;font-weight:800;margin-top:10px;">أضف منتج جديد</h2>
 
@@ -376,7 +376,14 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: username, password: password }),
     })
-      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        if (res.status === 429) {
+          // Cloudflare نفسه حظرنا (محاولات كثيرة متتالية) — يرجّع صفحة
+          // خطأ جاهزة منه، مو رد JSON، فنعالجها هنا بوضوح قبل محاولة القراءة
+          throw new Error('RATE_LIMITED');
+        }
+        return res.json();
+      })
       .then(function (data) {
         btn.disabled = false; btn.textContent = 'تسجيل الدخول';
         if (data.result === 'success') {
@@ -389,9 +396,13 @@
           msg.style.display = 'block';
         }
       })
-      .catch(function () {
+      .catch(function (err) {
         btn.disabled = false; btn.textContent = 'تسجيل الدخول';
-        msg.textContent = 'تعذر الاتصال بالخادم';
+        if (err && err.message === 'RATE_LIMITED') {
+          msg.textContent = 'محاولات كثيرة جدًا — انتظر شوي وحاول مرة ثانية';
+        } else {
+          msg.textContent = 'تعذر الاتصال بالخادم';
+        }
         msg.style.display = 'block';
       });
   }
@@ -604,7 +615,7 @@
     }).join('');
 
     modal.innerHTML =
-      '<button class="modal-close" onclick="closeDetail()">✕</button>' +
+      '<button class="modal-close" onclick="closeDetail()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
       '<div style="clear:both;"></div>' +
       '<h2 style="font-size:16px;font-weight:800;margin-top:10px;">P-' + String(o.id).padStart(4, '0') + '</h2>' +
       '<p style="font-size:13px;color:var(--text-dim);margin-top:4px;">' + o.status + '</p>' +
