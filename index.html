@@ -127,6 +127,16 @@
     border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
   .acc-audit-btn{width:100%;margin-top:20px;background:var(--bg);color:var(--accent-dark);border:1.5px solid var(--line);padding:12px;
     border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .analytics-period-tab.on{background:#fff;color:var(--accent);box-shadow:0 2px 6px -3px rgba(0,0,0,.2);}
+  .analytics-period-tab{color:var(--text-mute);cursor:pointer;}
+  .an-stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+  .an-stat-card{background:var(--bg);border-radius:12px;padding:10px 8px;text-align:center;}
+  .an-stat-num{font-size:15px;font-weight:800;color:var(--text);}
+  .an-stat-lbl{font-size:10px;color:var(--text-mute);margin-top:2px;}
+  .an-section-title{font-size:12.5px;font-weight:800;color:var(--text);margin:16px 0 8px;}
+  .an-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px;}
+  .an-row:last-child{border-bottom:none;}
+  .an-row-val{font-weight:800;color:var(--accent-dark);}
 
   .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
     display:flex;padding:9px 8px calc(9px + env(safe-area-inset-bottom));z-index:15;gap:4px;
@@ -253,6 +263,10 @@
       <div class="acc-card">
         <div class="acc-avatar" id="accAvatar"></div>
         <div class="acc-name" id="accName"></div>
+        <button class="acc-audit-btn" onclick="openAnalytics()">
+          <svg viewBox="0 0 24 24" fill="none" width="18" height="18" style="vertical-align:-4px;"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          التحليلات والتقارير
+        </button>
         <button class="acc-audit-btn" onclick="openAuditLog()">
           <svg viewBox="0 0 24 24" fill="none" width="18" height="18" style="vertical-align:-4px;"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
           سجل النشاطات
@@ -268,6 +282,20 @@
       <div style="clear:both;"></div>
       <div style="font-size:16px;font-weight:800;margin-bottom:12px;">سجل النشاطات</div>
       <div id="auditLogList"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="analyticsOverlay" style="display:none;" onclick="if(event.target===this)closeAnalytics()">
+    <div class="modal" style="max-width:480px;">
+      <button class="modal-close" onclick="closeAnalytics()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <div style="clear:both;"></div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:12px;">التحليلات والتقارير</div>
+      <div style="display:flex;gap:6px;background:var(--bg);border-radius:12px;padding:3px;margin-bottom:14px;">
+        <button type="button" class="analytics-period-tab on" id="apTabToday" onclick="switchAnalyticsPeriod('today')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;background:none;font-family:inherit;">اليوم</button>
+        <button type="button" class="analytics-period-tab" id="apTabWeek" onclick="switchAnalyticsPeriod('week')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;background:none;font-family:inherit;">آخر أسبوع</button>
+        <button type="button" class="analytics-period-tab" id="apTabMonth" onclick="switchAnalyticsPeriod('month')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;background:none;font-family:inherit;">آخر شهر</button>
+      </div>
+      <div id="analyticsResult"></div>
     </div>
   </div>
 
@@ -811,6 +839,123 @@
     document.getElementById('auditLogOverlay').classList.remove('open');
   }
 
+  let __analyticsData = null;
+  let __analyticsPeriod = 'today';
+  const __analyticsPeriodLabels = { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر' };
+  const __analyticsStatKeyByPeriod = { today: 'today', week: 'week', month: 'month' };
+
+  function openAnalytics() {
+    const overlay = document.getElementById('analyticsOverlay');
+    const box = document.getElementById('analyticsResult');
+    overlay.classList.add('open');
+    __analyticsPeriod = 'today';
+    ['today', 'week', 'month'].forEach(function (p) {
+      document.getElementById('apTab' + p.charAt(0).toUpperCase() + p.slice(1)).classList.toggle('on', p === 'today');
+    });
+    box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
+
+    fetch(API_URL + '/analytics', { headers: authHeaders() })
+      .then(function (res) {
+        if (res.status === 401) { staffLogout(); throw new Error('session-expired'); }
+        return res.json();
+      })
+      .then(function (data) {
+        if (data.result !== 'success') {
+          box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذّر تحميل التحليلات: ' + (data.error || '') + '</p>';
+          return;
+        }
+        __analyticsData = data;
+        renderAnalytics();
+      })
+      .catch(function () {
+        box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>';
+      });
+  }
+
+  function closeAnalytics() {
+    document.getElementById('analyticsOverlay').classList.remove('open');
+  }
+
+  function switchAnalyticsPeriod(period) {
+    __analyticsPeriod = period;
+    ['today', 'week', 'month'].forEach(function (p) {
+      document.getElementById('apTab' + p.charAt(0).toUpperCase() + p.slice(1)).classList.toggle('on', p === period);
+    });
+    renderAnalytics();
+  }
+
+  function renderAnalytics() {
+    if (!__analyticsData) return;
+    const d = __analyticsData;
+    const p = __analyticsPeriod;
+    const box = document.getElementById('analyticsResult');
+    const sales = d.sales[p] || { count: 0, revenue: 0, avgOrderValue: 0 };
+
+    let html = '<div class="an-stat-grid">' +
+      '<div class="an-stat-card"><div class="an-stat-num">' + sales.count + '</div><div class="an-stat-lbl">عدد الطلبات</div></div>' +
+      '<div class="an-stat-card"><div class="an-stat-num">' + sales.revenue.toLocaleString() + '</div><div class="an-stat-lbl">إجمالي المبيعات</div></div>' +
+      '<div class="an-stat-card"><div class="an-stat-num">' + sales.avgOrderValue.toLocaleString() + '</div><div class="an-stat-lbl">متوسط الطلب</div></div>' +
+      '</div>';
+
+    // أفضل المنتجات مبيعًا
+    const topProducts = (d.topProducts && d.topProducts[p]) || [];
+    html += '<div class="an-section-title">أفضل المنتجات مبيعًا (' + __analyticsPeriodLabels[p] + ')</div>';
+    if (topProducts.length === 0) {
+      html += '<p style="font-size:11.5px;color:var(--text-mute);">ماكو مبيعات بهذي الفترة</p>';
+    } else {
+      topProducts.forEach(function (row) {
+        html += '<div class="an-row"><span>' + row.name + '</span><span class="an-row-val">' + row.quantity + '</span></div>';
+      });
+    }
+
+    // أكثر المنتجات مشاهدة (لو التتبّع مفعّل)
+    if (d.viewsTrackingActive) {
+      const topViewed = (d.topViewed && d.topViewed[p]) || [];
+      html += '<div class="an-section-title">أكثر المنتجات مشاهدة (' + __analyticsPeriodLabels[p] + ')</div>';
+      if (topViewed.length === 0) {
+        html += '<p style="font-size:11.5px;color:var(--text-mute);">ماكو مشاهدات مسجّلة بهذي الفترة</p>';
+      } else {
+        topViewed.forEach(function (row) {
+          html += '<div class="an-row"><span>' + row.name + '</span><span class="an-row-val">' + row.views + '</span></div>';
+        });
+      }
+    }
+
+    // توزيع المناطق
+    const regions = (d.regionBreakdown && d.regionBreakdown[p]) || {};
+    const regionKeys = Object.keys(regions).sort(function (a, b) { return regions[b] - regions[a]; });
+    html += '<div class="an-section-title">أكثر المناطق طلبًا (' + __analyticsPeriodLabels[p] + ')</div>';
+    if (regionKeys.length === 0) {
+      html += '<p style="font-size:11.5px;color:var(--text-mute);">ماكو بيانات بهذي الفترة</p>';
+    } else {
+      regionKeys.forEach(function (region) {
+        html += '<div class="an-row"><span>' + region + '</span><span class="an-row-val">' + regions[region] + '</span></div>';
+      });
+    }
+
+    // توزيع حالات الطلبات (إجمالي، مو مقسّم بالفترة)
+    html += '<div class="an-section-title">توزيع حالات الطلبات (الإجمالي)</div>';
+    Object.keys(d.statusBreakdown || {}).forEach(function (status) {
+      html += '<div class="an-row"><span>' + status + '</span><span class="an-row-val">' + d.statusBreakdown[status] + '</span></div>';
+    });
+
+    // أداء الموظفين (إجمالي)
+    html += '<div class="an-section-title">أداء الموظفين — عدد الطلبات المُعالَجة (الإجمالي)</div>';
+    if (!d.staffPerformance || d.staffPerformance.length === 0) {
+      html += '<p style="font-size:11.5px;color:var(--text-mute);">ماكو بيانات بعد</p>';
+    } else {
+      d.staffPerformance.forEach(function (row) {
+        html += '<div class="an-row"><span>' + row.staff + '</span><span class="an-row-val">' + row.ordersHandled + '</span></div>';
+      });
+    }
+
+    if (!d.viewsTrackingActive) {
+      html += '<p style="font-size:10.5px;color:var(--text-mute);margin-top:14px;text-align:center;"><svg viewBox="0 0 24 24" fill="none" width="12" height="12" style="vertical-align:-1px;display:inline-block;"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> تتبّع مشاهدات المنتجات غير مفعّل بعد — يحتاج إعداد إضافي بسيط</p>';
+    }
+
+    box.innerHTML = html;
+  }
+
   function downloadInvoicePdf() {
     if (!currentInvoiceOrder) return;
     const tpl = document.getElementById('invoiceTemplate');
@@ -873,6 +1018,7 @@
   }
 
   // ===================== بحث الزبائن =====================
+  let __currentNotesPhone = '';
   function searchCustomer() {
     const q = document.getElementById('custSearchInput').value.trim();
     const box = document.getElementById('custResult');
@@ -883,6 +1029,7 @@
       .then(function (data) {
         if (data.result !== 'success') { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;margin-top:12px;">' + (data.error || 'ماكو زبون بهذا الرقم') + '</p>'; return; }
         const c = data.customer;
+        __currentNotesPhone = c.phone;
         const ordersHtml = (data.orders || []).map(function (o) {
           const itemsText = (o.items || []).map(function (i) { return escapeHtml_(i.productName) + ' ×' + i.quantity; }).join('، ');
           return '<div class="cust-order-row"><div><b>' + o.code + '</b><br><span style="color:var(--text-mute);font-size:10.5px;">' + (itemsText || 'ماكو تفاصيل') + '</span></div>' +
@@ -892,9 +1039,56 @@
         box.innerHTML = '<div class="cust-info-card">' +
           '<div style="font-size:15px;font-weight:800;">' + escapeHtml_(c.name) + '</div>' +
           '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + escapeHtml_(c.phone) + ' — رقم الزبون: ' + escapeHtml_(c.code) + '</div>' +
-          '<div style="margin-top:12px;">' + ordersHtml + '</div></div>';
+          '<div style="margin-top:12px;">' + ordersHtml + '</div>' +
+          '<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;">' +
+          '<div style="font-size:13px;font-weight:800;margin-bottom:8px;">ملاحظات على الزبون</div>' +
+          '<div id="custNotesList" style="margin-bottom:10px;"><p style="color:var(--text-mute);font-size:11.5px;">جارٍ التحميل...</p></div>' +
+          '<textarea id="newNoteText" rows="2" placeholder="اكتب ملاحظة جديدة..." style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:12px;margin-bottom:8px;"></textarea>' +
+          '<button class="submit-btn" style="padding:9px;font-size:12px;" onclick="addCustomerNote()">إضافة ملاحظة</button>' +
+          '</div></div>';
+        loadCustomerNotes();
       })
       .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>'; });
+  }
+
+  function loadCustomerNotes() {
+    const list = document.getElementById('custNotesList');
+    if (!list || !__currentNotesPhone) return;
+    fetch(API_URL + '/customer-notes?phone=' + encodeURIComponent(__currentNotesPhone), { headers: authHeaders() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success' || !data.notes || data.notes.length === 0) {
+          list.innerHTML = '<p style="color:var(--text-mute);font-size:11.5px;">ماكو ملاحظات بعد</p>';
+          return;
+        }
+        list.innerHTML = data.notes.map(function (n) {
+          const when = n.createdAt ? new Date(n.createdAt).toLocaleString('ar-IQ') : '';
+          return '<div style="background:var(--bg);border-radius:10px;padding:9px 11px;margin-bottom:6px;font-size:11.5px;">' +
+            '<div>' + escapeHtml_(n.note) + '</div>' +
+            '<div style="color:var(--text-mute);font-size:10px;margin-top:3px;">' + escapeHtml_(n.staffUsername) + ' — ' + when + '</div></div>';
+        }).join('');
+      })
+      .catch(function () { list.innerHTML = '<p style="color:var(--danger);font-size:11.5px;">تعذر تحميل الملاحظات</p>'; });
+  }
+
+  function addCustomerNote() {
+    const textEl = document.getElementById('newNoteText');
+    const note = textEl.value.trim();
+    if (!note || !__currentNotesPhone) return;
+    fetch(API_URL + '/add-customer-note', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ phone: __currentNotesPhone, note: note }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result === 'success') {
+          textEl.value = '';
+          loadCustomerNotes();
+        } else {
+          alert(data.error || 'تعذّرت إضافة الملاحظة');
+        }
+      })
+      .catch(function () { alert('تعذر الاتصال بالخادم'); });
   }
 
   // ===================== إضافة/تعديل منتج =====================
