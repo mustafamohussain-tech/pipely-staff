@@ -125,8 +125,15 @@
   .acc-name{font-size:16px;font-weight:800}
   .acc-logout{width:100%;margin-top:20px;background:var(--danger);color:#fff;border:none;padding:12px;
     border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
-  .acc-audit-btn{width:100%;margin-top:20px;background:var(--bg);color:var(--accent-dark);border:1.5px solid var(--line);padding:12px;
+  .acc-audit-btn{width:100%;margin-top:20px;background:#fff;color:var(--accent-dark);border:1.5px solid var(--line);padding:12px;
     border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .acc-tab.on{background:var(--bg);color:var(--accent);}
+  .bc-nav{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-mute);margin-bottom:14px;
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;}
+  .bc-nav svg{opacity:.5;flex-shrink:0;}
+  .bc-nav b{color:var(--accent-dark);font-weight:800;}
+  .acc-row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;
+    box-shadow:0 4px 12px -10px rgba(0,0,0,.15);}
   .analytics-period-tab.on{background:#fff;color:var(--accent);box-shadow:0 2px 6px -3px rgba(0,0,0,.2);}
   .analytics-period-tab{color:var(--text-mute);cursor:pointer;}
   .an-stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
@@ -175,6 +182,30 @@
      =================================================================== */
   .desktop-nav{display:none}
 
+  .hamburger-btn{width:36px;height:36px;border-radius:9px;border:none;background:none;cursor:pointer;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;}
+  .hamburger-btn span{width:18px;height:2px;background:#fff;border-radius:2px;display:block;}
+
+  .drawer-overlay{position:fixed;inset:0;background:rgba(20,16,36,.45);z-index:30;display:none;}
+  .drawer-overlay.open{display:block;}
+  .drawer{position:fixed;top:0;bottom:0;right:0;width:250px;background:#fff;z-index:31;
+    box-shadow:-10px 0 24px -8px rgba(0,0,0,.25);padding:18px 12px;transform:translateX(100%);
+    transition:transform .2s ease;overflow-y:auto;}
+  .drawer.open{transform:translateX(0);}
+  .drawer-header{display:flex;align-items:center;gap:10px;padding-bottom:16px;margin-bottom:10px;border-bottom:1px solid var(--line);}
+  .drawer-avatar{width:38px;height:38px;border-radius:50%;background:rgba(124,92,255,.12);
+    display:flex;align-items:center;justify-content:center;color:var(--accent-dark);font-weight:800;font-size:14px;flex-shrink:0;}
+  .drawer-name{font-size:12.5px;font-weight:800;}
+  .drawer-role{font-size:10px;color:var(--text-mute);}
+  .drawer-close{position:absolute;top:16px;left:14px;width:28px;height:28px;border-radius:8px;
+    background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .drawer-item{display:flex;align-items:center;gap:11px;padding:12px 11px;border-radius:11px;
+    font-size:12.5px;font-weight:700;color:var(--text-dim);margin-bottom:2px;cursor:pointer;
+    border:none;background:none;width:100%;text-align:right;font-family:inherit;min-height:44px;}
+  .drawer-item.on{background:rgba(124,92,255,.1);color:var(--accent-dark);}
+  .drawer-item:active{background:var(--bg);}
+  .drawer-divider{height:1px;background:var(--line);margin:8px 0;}
+
   @media (min-width: 900px) {
     body{padding-bottom:0}
 
@@ -184,8 +215,10 @@
       padding:9px 16px;border-radius:20px;cursor:pointer;font-family:inherit}
     .desktop-nav-btn.on{background:rgba(255,255,255,.2);color:#fff}
     .desktop-nav-btn:hover{background:rgba(255,255,255,.12)}
+    .hamburger-btn{display:none}
 
     .bottom-nav{display:none}
+    .drawer-overlay,.drawer{display:none !important}
 
     .board{padding:24px 32px;justify-content:flex-start;flex-wrap:nowrap}
     .col{min-width:0;flex:1;max-width:320px;max-height:calc(100vh - 110px)}
@@ -220,17 +253,118 @@
 
 <div id="appContent">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="openDrawer()" aria-label="القائمة"><span></span><span></span><span></span></button>
     <div class="logo"><span class="dot"></span> لوحة الموظفين</div>
     <nav class="desktop-nav">
-      <button class="desktop-nav-btn on" id="dnavKanban" onclick="switchStaffTab('kanban')">حالة الزبائن</button>
+      <button class="desktop-nav-btn on" id="dnavKanban" onclick="switchStaffTab('kanban')">الطلبات</button>
       <button class="desktop-nav-btn" id="dnavInventory" onclick="switchStaffTab('inventory')">المخزون</button>
       <button class="desktop-nav-btn" id="dnavCustomers" onclick="switchStaffTab('customers')">الزبائن</button>
-      <button class="desktop-nav-btn" id="dnavAccount" onclick="switchStaffTab('account')">حسابي</button>
+      <button class="desktop-nav-btn" id="dnavAccounting" onclick="switchStaffTab('accounting')">الحسابات</button>
+      <button class="desktop-nav-btn" id="dnavReports" onclick="openAnalytics()">التقارير</button>
+      <button class="desktop-nav-btn" id="dnavAuditLog" onclick="openAuditLog()">سجل النشاطات</button>
     </nav>
     <div class="top-right">
       <span class="badge" id="badge">0</span>
       <button class="sound-toggle" id="soundBtn" onclick="toggleSound()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" id="soundIcon"><path d="M4 10v4h3.5l4 3.5v-11l-4 3.5H4z" fill="currentColor"/><path d="M16 9a4.5 4.5 0 010 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundWave1"/><path d="M18.5 6.5a8 8 0 010 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundWave2" style="display:none;"/><line x1="15" y1="9" x2="20" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundMuteLine"/><line x1="20" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundMuteLine2"/></svg></button>
       <button class="refresh-btn" onclick="loadOrders()">تحديث</button>
+    </div>
+  </div>
+
+  <div class="tab-view" id="accountingView" style="display:none;">
+    <div style="padding:14px;">
+      <div class="bc-nav" id="accBreadcrumb">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none"><path d="M3 10l9-6 9 6v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        الحسابات
+        <svg viewBox="0 0 24 24" width="10" height="10" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <b id="accBreadcrumbCurrent">المصروفات</b>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div style="background:#fff;border:1px solid var(--line);box-shadow:0 4px 12px -10px rgba(0,0,0,.15);border-radius:12px;padding:10px 8px;text-align:center;"><div style="font-size:15px;font-weight:800;color:var(--green);" id="accNetProfit">—</div><div style="font-size:9.5px;color:var(--text-mute);margin-top:3px;">صافي الربح (الشهر)</div></div>
+        <div style="background:#fff;border:1px solid var(--line);box-shadow:0 4px 12px -10px rgba(0,0,0,.15);border-radius:12px;padding:10px 8px;text-align:center;"><div style="font-size:15px;font-weight:800;" id="accRevenue">—</div><div style="font-size:9.5px;color:var(--text-mute);margin-top:3px;">الإيرادات (الشهر)</div></div>
+        <div style="background:#fff;border:1px solid var(--line);box-shadow:0 4px 12px -10px rgba(0,0,0,.15);border-radius:12px;padding:10px 8px;text-align:center;"><div style="font-size:15px;font-weight:800;color:var(--danger);" id="accExpensesTotal">—</div><div style="font-size:9.5px;color:var(--text-mute);margin-top:3px;">المصروفات (الشهر)</div></div>
+      </div>
+
+      <div style="display:flex;gap:5px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:3px;margin-bottom:14px;">
+        <button type="button" class="acc-tab on" id="accTabExpenses" onclick="switchAccountingTab('expenses')" style="flex:1;padding:9px 4px;border:none;border-radius:9px;font-size:11.5px;font-weight:700;background:none;font-family:inherit;color:var(--text-mute);cursor:pointer;">المصروفات</button>
+        <button type="button" class="acc-tab" id="accTabReceipts" onclick="switchAccountingTab('receipts')" style="flex:1;padding:9px 4px;border:none;border-radius:9px;font-size:11.5px;font-weight:700;background:none;font-family:inherit;color:var(--text-mute);cursor:pointer;">وصولات الاستلام</button>
+        <button type="button" class="acc-tab" id="accTabPricing" onclick="switchAccountingTab('pricing')" style="flex:1;padding:9px 4px;border:none;border-radius:9px;font-size:11.5px;font-weight:700;background:none;font-family:inherit;color:var(--text-mute);cursor:pointer;">تسعير المنتجات</button>
+      </div>
+
+      <div id="accExpensesPanel">
+        <button class="acc-audit-btn" onclick="openAddExpenseForm()" style="margin-top:0;margin-bottom:12px;">
+          <svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-left:5px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          إضافة مصروف جديد
+        </button>
+        <div id="expensesList"></div>
+      </div>
+
+      <div id="accReceiptsPanel" style="display:none;">
+        <div id="receiptsList"></div>
+      </div>
+
+      <div id="accPricingPanel" style="display:none;">
+        <div id="pricingList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="addExpenseOverlay" onclick="if(event.target===this)closeAddExpenseForm()">
+    <div class="modal">
+      <button class="modal-close" onclick="closeAddExpenseForm()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <div style="clear:both;"></div>
+      <h2 style="font-size:16px;font-weight:800;margin-top:10px;">إضافة مصروف جديد</h2>
+      <label class="pf-label">نوع المصروف</label>
+      <select id="expType" class="pf-input">
+        <option value="إيجار">إيجار</option>
+        <option value="رواتب">رواتب</option>
+        <option value="شحن">شحن</option>
+        <option value="بضاعة">بضاعة</option>
+        <option value="فواتير">فواتير</option>
+        <option value="تسويق">تسويق</option>
+        <option value="آخر">مصروف آخر</option>
+      </select>
+      <label class="pf-label">الوصف</label>
+      <input type="text" id="expDescription" class="pf-input" placeholder="مثال: إيجار المحل — أغسطس">
+      <label class="pf-label">المبلغ (د.ع)</label>
+      <input type="number" id="expAmount" class="pf-input" placeholder="0">
+      <div class="msg" id="expenseMsg" style="display:none;"></div>
+      <button class="submit-btn" style="margin-top:14px;" onclick="submitExpense()">حفظ المصروف</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="editExpenseOverlay" onclick="if(event.target===this)closeEditExpense()">
+    <div class="modal">
+      <button class="modal-close" onclick="closeEditExpense()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <div style="clear:both;"></div>
+      <h2 style="font-size:16px;font-weight:800;margin-top:10px;">تعديل مصروف</h2>
+      <label class="pf-label">نوع المصروف</label>
+      <select id="editExpType" class="pf-input">
+        <option value="إيجار">إيجار</option>
+        <option value="رواتب">رواتب</option>
+        <option value="شحن">شحن</option>
+        <option value="بضاعة">بضاعة</option>
+        <option value="فواتير">فواتير</option>
+        <option value="تسويق">تسويق</option>
+        <option value="آخر">مصروف آخر</option>
+      </select>
+      <label class="pf-label">الوصف</label>
+      <input type="text" id="editExpDescription" class="pf-input">
+      <label class="pf-label">المبلغ (د.ع)</label>
+      <input type="number" id="editExpAmount" class="pf-input">
+      <label class="pf-label">سبب التعديل <span style="color:var(--danger);">*إلزامي</span></label>
+      <input type="text" id="editExpReason" class="pf-input" placeholder="مثال: تصحيح خطأ إدخال">
+      <div class="msg" id="editExpenseMsg" style="display:none;"></div>
+      <button class="submit-btn" style="margin-top:14px;" onclick="submitEditExpense()">حفظ التعديل</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="financialHistoryOverlay" onclick="if(event.target===this)closeFinancialHistory()">
+    <div class="modal">
+      <button class="modal-close" onclick="closeFinancialHistory()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <div style="clear:both;"></div>
+      <h2 style="font-size:16px;font-weight:800;margin-top:10px;margin-bottom:12px;">السجل الكامل</h2>
+      <div id="financialHistoryList"></div>
     </div>
   </div>
 
@@ -299,24 +433,46 @@
     </div>
   </div>
 
-  <div class="bottom-nav">
-    <button class="nav-btn on" id="navKanban" onclick="switchStaffTab('kanban')">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="6" height="16" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="9.5" y="4" width="6" height="10" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="16" y="4" width="6" height="13" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
-      <span class="nav-label">حالة الزبائن</span>
-    </button>
-    <button class="nav-btn" id="navInventory" onclick="switchStaffTab('inventory')">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><path d="M3.5 8L12 4l8.5 4-8.5 4-8.5-4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8v8l8.5 4 8.5-4V8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <span class="nav-label">المخزون</span>
-    </button>
-    <button class="nav-btn" id="navCustomers" onclick="switchStaffTab('customers')">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 20c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="8.5" r="2.3" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 14.3c2.5.3 4.5 2.3 4.5 4.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <span class="nav-label">الزبائن</span>
-    </button>
-    <button class="nav-btn" id="navAccount2" onclick="switchStaffTab('account')">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.3" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <span class="nav-label">حسابي</span>
-    </button>
+  <div class="bottom-nav" style="display:none;"></div>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" onclick="closeDrawer()" aria-label="إغلاق"><svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  <div class="drawer-header">
+    <div class="drawer-avatar" id="drawerAvatar"></div>
+    <div><div class="drawer-name" id="drawerName"></div><div class="drawer-role" id="drawerRole"></div></div>
   </div>
+  <button class="drawer-item on" id="dwKanban" onclick="switchStaffTab('kanban')">
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="3" y="4" width="6" height="16" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="9.5" y="4" width="6" height="10" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="16" y="4" width="6" height="13" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+    الطلبات
+  </button>
+  <button class="drawer-item" id="dwInventory" onclick="switchStaffTab('inventory')">
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><path d="M3.5 8L12 4l8.5 4-8.5 4-8.5-4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3.5 8v8l8.5 4 8.5-4V8" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+    المخزون
+  </button>
+  <button class="drawer-item" id="dwCustomers" onclick="switchStaffTab('customers')">
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M3 20c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    الزبائن
+  </button>
+  <div class="drawer-divider"></div>
+  <button class="drawer-item" id="dwAccounting" onclick="switchStaffTab('accounting')">
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="3" y="6" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.7"/></svg>
+    الحسابات
+  </button>
+  <button class="drawer-item" id="dwReports" onclick="closeDrawer();openAnalytics()">
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+    التقارير
+  </button>
+  <button class="drawer-item" id="dwAuditLog" onclick="closeDrawer();openAuditLog()">
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    سجل النشاطات
+  </button>
+  <div class="drawer-divider"></div>
+  <button class="drawer-item" id="dwAccount" onclick="switchStaffTab('account')">
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><circle cx="12" cy="8" r="3.3" stroke="currentColor" stroke-width="1.7"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    حسابي
+  </button>
 </div>
 
 <div class="overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
@@ -509,18 +665,37 @@
   }
 
   function switchStaffTab(tab) {
-    ['kanban', 'inventory', 'customers', 'account'].forEach(function (t) {
+    ['kanban', 'inventory', 'customers', 'account', 'accounting'].forEach(function (t) {
       document.getElementById(t + 'View').style.display = (t === tab) ? 'block' : 'none';
     });
-    document.getElementById('navKanban').classList.toggle('on', tab === 'kanban');
-    document.getElementById('navInventory').classList.toggle('on', tab === 'inventory');
-    document.getElementById('navCustomers').classList.toggle('on', tab === 'customers');
-    document.getElementById('navAccount2').classList.toggle('on', tab === 'account');
     document.getElementById('dnavKanban').classList.toggle('on', tab === 'kanban');
     document.getElementById('dnavInventory').classList.toggle('on', tab === 'inventory');
     document.getElementById('dnavCustomers').classList.toggle('on', tab === 'customers');
-    document.getElementById('dnavAccount').classList.toggle('on', tab === 'account');
+    document.getElementById('dnavAccounting').classList.toggle('on', tab === 'accounting');
+    document.getElementById('dwKanban').classList.toggle('on', tab === 'kanban');
+    document.getElementById('dwInventory').classList.toggle('on', tab === 'inventory');
+    document.getElementById('dwCustomers').classList.toggle('on', tab === 'customers');
+    document.getElementById('dwAccounting').classList.toggle('on', tab === 'accounting');
+    document.getElementById('dwAccount').classList.toggle('on', tab === 'account');
     if (tab === 'inventory') loadInventory();
+    if (tab === 'accounting') { loadAccountingOverview(); switchAccountingTab('expenses'); }
+    closeDrawer();
+  }
+
+  function openDrawer() {
+    document.getElementById('drawerOverlay').classList.add('open');
+    document.getElementById('drawer').classList.add('open');
+    const session = getStaffSession();
+    if (session) {
+      document.getElementById('drawerAvatar').textContent = (session.staffName || '?').charAt(0);
+      document.getElementById('drawerName').textContent = session.staffName || '';
+      document.getElementById('drawerRole').textContent = 'موظف';
+    }
+  }
+
+  function closeDrawer() {
+    document.getElementById('drawerOverlay').classList.remove('open');
+    document.getElementById('drawer').classList.remove('open');
   }
 
   function toggleSound() {
@@ -837,6 +1012,248 @@
 
   function closeAuditLog() {
     document.getElementById('auditLogOverlay').classList.remove('open');
+  }
+
+  let __accountingTab = 'expenses';
+  let __expensesCache = {};
+  const __accountingTabLabels = { expenses: 'المصروفات', receipts: 'وصولات الاستلام', pricing: 'تسعير المنتجات' };
+  function switchAccountingTab(tab) {
+    __accountingTab = tab;
+    ['expenses', 'receipts', 'pricing'].forEach(function (t) {
+      document.getElementById('accTab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('on', t === tab);
+      document.getElementById('acc' + t.charAt(0).toUpperCase() + t.slice(1) + 'Panel').style.display = (t === tab) ? 'block' : 'none';
+    });
+    document.getElementById('accBreadcrumbCurrent').textContent = __accountingTabLabels[tab] || tab;
+    if (tab === 'expenses') loadExpenses();
+    if (tab === 'receipts') loadReceipts();
+    if (tab === 'pricing') loadPricing();
+  }
+
+  function loadAccountingOverview() {
+    fetch(API_URL + '/accounting-overview', { headers: authHeaders() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success') return;
+        document.getElementById('accNetProfit').textContent = data.month.netProfit.toLocaleString();
+        document.getElementById('accRevenue').textContent = data.month.revenue.toLocaleString();
+        document.getElementById('accExpensesTotal').textContent = data.month.expenses.toLocaleString();
+      })
+      .catch(function () {});
+  }
+
+  function loadExpenses() {
+    const box = document.getElementById('expensesList');
+    box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
+    fetch(API_URL + '/expenses', { headers: authHeaders() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success' || !data.expenses || data.expenses.length === 0) {
+          box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">ماكو مصروفات مسجّلة بعد</p>';
+          return;
+        }
+        __expensesCache = {};
+        data.expenses.forEach(function (e) { __expensesCache[e.id] = e; });
+        box.innerHTML = data.expenses.map(function (e) {
+          return '<div class="acc-row" id="exp_' + e.id + '"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+            '<span style="font-weight:800;font-size:12.5px;">' + escapeHtml_(e.type) + '</span>' +
+            '<span style="font-weight:700;font-size:12px;color:var(--danger);">' + e.amount.toLocaleString() + ' د.ع</span></div>' +
+            '<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">' + escapeHtml_(e.description || '') + '</div>' +
+            '<div style="font-size:10px;color:var(--text-mute);margin-bottom:8px;">' + escapeHtml_(e.addedBy) + '</div>' +
+            '<div style="display:flex;gap:6px;">' +
+            '<button style="flex:1;min-height:32px;background:var(--card);color:var(--accent-dark);border:1.5px solid var(--line);border-radius:8px;font-size:10.5px;font-weight:700;" onclick="openEditExpense(' + e.id + ')">تعديل</button>' +
+            '<button style="flex:1;min-height:32px;background:var(--card);color:var(--accent-dark);border:1.5px solid var(--line);border-radius:8px;font-size:10.5px;font-weight:700;" onclick="openFinancialHistory(\'expense\', ' + e.id + ')">السجل الكامل</button>' +
+            '</div></div>';
+        }).join('');
+      })
+      .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر تحميل المصروفات</p>'; });
+  }
+
+  function openAddExpenseForm() {
+    document.getElementById('expType').value = 'إيجار';
+    document.getElementById('expDescription').value = '';
+    document.getElementById('expAmount').value = '';
+    document.getElementById('expenseMsg').style.display = 'none';
+    document.getElementById('addExpenseOverlay').classList.add('open');
+  }
+  function closeAddExpenseForm() {
+    document.getElementById('addExpenseOverlay').classList.remove('open');
+  }
+  function submitExpense() {
+    const type = document.getElementById('expType').value;
+    const description = document.getElementById('expDescription').value.trim();
+    const amount = parseFloat(document.getElementById('expAmount').value);
+    const msg = document.getElementById('expenseMsg');
+    if (!amount || amount <= 0) {
+      msg.className = 'msg error'; msg.textContent = 'أدخل مبلغ صحيح'; msg.style.display = 'block';
+      return;
+    }
+    fetch(API_URL + '/add-expense', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ expenseType: type, description: description, amount: amount }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success') {
+          msg.className = 'msg error'; msg.textContent = data.error || 'تعذّر حفظ المصروف'; msg.style.display = 'block';
+          return;
+        }
+        closeAddExpenseForm();
+        loadExpenses();
+        loadAccountingOverview();
+      })
+      .catch(function () {
+        msg.className = 'msg error'; msg.textContent = 'تعذر الاتصال بالخادم'; msg.style.display = 'block';
+      });
+  }
+
+  function loadReceipts() {
+    const box = document.getElementById('receiptsList');
+    box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
+    fetch(API_URL + '/all-orders', { headers: authHeaders() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success') { box.innerHTML = ''; return; }
+        const pending = (data.orders || []).filter(function (o) { return o.status === '✅ تم الاستلام والدفع'; });
+        if (pending.length === 0) {
+          box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">ماكو طلبات بانتظار تأكيد الاستلام</p>';
+          return;
+        }
+        box.innerHTML = pending.map(function (o) {
+          return '<div class="acc-row"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+            '<span style="font-weight:800;font-size:12.5px;">' + escapeHtml_(o.orderCode || ('#' + o.id)) + '</span>' +
+            '<span style="font-weight:700;font-size:12px;color:var(--accent-dark);">' + (o.total || 0).toLocaleString() + ' د.ع</span></div>' +
+            '<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">' + escapeHtml_(o.customerName || '') + '</div>' +
+            '<button class="submit-btn" style="min-height:36px;font-size:11px;" onclick="confirmReceipt(' + o.id + ')">تأكيد استلام المبلغ</button></div>';
+        }).join('');
+      })
+      .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر التحميل</p>'; });
+  }
+
+  function confirmReceipt(orderId) {
+    fetch(API_URL + '/confirm-payment-receipt', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ orderId: orderId }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result === 'success') {
+          loadReceipts();
+          loadAccountingOverview();
+        }
+      })
+      .catch(function () {});
+  }
+
+  function loadPricing() {
+    const box = document.getElementById('pricingList');
+    box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
+    fetch(API_URL + '/products', { headers: authHeaders() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success' || !data.products || data.products.length === 0) {
+          box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">ماكو منتجات بعد</p>';
+          return;
+        }
+        box.innerHTML = data.products.map(function (p) {
+          return '<div class="acc-row">' +
+            '<div style="font-weight:800;font-size:12.5px;margin-bottom:8px;">' + escapeHtml_(p.name) + '</div>' +
+            '<label class="pf-label" style="margin-top:0;">سعر التكلفة</label>' +
+            '<input type="number" class="pf-input" id="cost_' + p.id + '" value="' + (p.costPrice || '') + '">' +
+            '<label class="pf-label">نسبة الربح (%)</label>' +
+            '<input type="number" class="pf-input" id="margin_' + p.id + '" value="' + (p.profitMargin || '') + '">' +
+            '<div style="font-size:11px;color:var(--text-dim);margin:6px 0;">السعر الحالي: ' + (p.price || 0).toLocaleString() + ' د.ع</div>' +
+            '<button class="submit-btn" style="min-height:36px;font-size:11px;" onclick="savePricing(' + p.id + ')">حفظ التسعير</button></div>';
+        }).join('');
+      })
+      .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر التحميل</p>'; });
+  }
+
+  function savePricing(productId) {
+    const costPrice = parseFloat(document.getElementById('cost_' + productId).value) || 0;
+    const profitMargin = parseFloat(document.getElementById('margin_' + productId).value) || 0;
+    fetch(API_URL + '/update-product', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ productId: productId, costPrice: costPrice, profitMargin: profitMargin }),
+    }).catch(function () {});
+  }
+
+  let __editingExpenseId = null;
+  function openEditExpense(id) {
+    const e = __expensesCache[id];
+    if (!e) return;
+    __editingExpenseId = id;
+    document.getElementById('editExpType').value = e.type;
+    document.getElementById('editExpDescription').value = e.description || '';
+    document.getElementById('editExpAmount').value = e.amount;
+    document.getElementById('editExpReason').value = '';
+    document.getElementById('editExpenseMsg').style.display = 'none';
+    document.getElementById('editExpenseOverlay').classList.add('open');
+  }
+  function closeEditExpense() {
+    document.getElementById('editExpenseOverlay').classList.remove('open');
+  }
+  function submitEditExpense() {
+    const reason = document.getElementById('editExpReason').value.trim();
+    const msg = document.getElementById('editExpenseMsg');
+    if (!reason) {
+      msg.className = 'msg error'; msg.textContent = 'سبب التعديل إلزامي'; msg.style.display = 'block';
+      return;
+    }
+    fetch(API_URL + '/update-expense', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({
+        expenseId: __editingExpenseId,
+        type: document.getElementById('editExpType').value,
+        description: document.getElementById('editExpDescription').value.trim(),
+        amount: document.getElementById('editExpAmount').value,
+        reason: reason,
+      }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success') {
+          msg.className = 'msg error'; msg.textContent = data.error || 'تعذّر حفظ التعديل'; msg.style.display = 'block';
+          return;
+        }
+        closeEditExpense();
+        loadExpenses();
+        loadAccountingOverview();
+      })
+      .catch(function () {
+        msg.className = 'msg error'; msg.textContent = 'تعذر الاتصال بالخادم'; msg.style.display = 'block';
+      });
+  }
+
+  function openFinancialHistory(recordType, recordId) {
+    const box = document.getElementById('financialHistoryList');
+    box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
+    document.getElementById('financialHistoryOverlay').classList.add('open');
+    fetch(API_URL + '/financial-history?recordType=' + encodeURIComponent(recordType) + '&recordId=' + recordId, { headers: authHeaders() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success' || !data.history || data.history.length === 0) {
+          box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">ماكو سجل تعديلات بعد</p>';
+          return;
+        }
+        box.innerHTML = data.history.map(function (h) {
+          const when = h.createdAt ? new Date(h.createdAt).toLocaleString('ar-IQ') : '';
+          let changeHtml = '';
+          if (h.action === 'تعديل' && h.field) {
+            changeHtml = '<div style="font-size:10.5px;color:var(--text-dim);background:var(--bg);border-radius:8px;padding:6px 9px;margin-top:5px;">' +
+              escapeHtml_(h.field) + ': <span style="color:var(--danger);text-decoration:line-through;">' + escapeHtml_(h.oldValue) + '</span> ← <span style="color:var(--green);font-weight:700;">' + escapeHtml_(h.newValue) + '</span></div>';
+            if (h.reason) changeHtml += '<div style="font-size:10px;color:var(--text-mute);margin-top:3px;">السبب: ' + escapeHtml_(h.reason) + '</div>';
+          }
+          return '<div style="padding:0 0 14px 16px;border-right:2px solid var(--line);margin-right:5px;position:relative;">' +
+            '<div style="position:absolute;right:-6px;top:2px;width:11px;height:11px;border-radius:50%;background:var(--accent);border:2px solid #fff;"></div>' +
+            '<div style="font-size:11.5px;font-weight:800;">' + escapeHtml_(h.staff) + ' — ' + escapeHtml_(h.action) + '</div>' +
+            '<div style="font-size:9.5px;color:var(--text-mute);margin-bottom:2px;">' + when + '</div>' +
+            changeHtml + '</div>';
+        }).join('');
+      })
+      .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر تحميل السجل</p>'; });
+  }
+  function closeFinancialHistory() {
+    document.getElementById('financialHistoryOverlay').classList.remove('open');
   }
 
   let __analyticsData = null;
