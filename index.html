@@ -262,8 +262,13 @@
       <button class="desktop-nav-btn" id="dnavAccounting" onclick="switchStaffTab('accounting')">الحسابات</button>
       <button class="desktop-nav-btn" id="dnavReports" onclick="openAnalytics()">التقارير</button>
       <button class="desktop-nav-btn" id="dnavAuditLog" onclick="openAuditLog()">سجل النشاطات</button>
+      <button class="desktop-nav-btn" id="dnavPermissions" onclick="openPermissions()">الصلاحيات</button>
     </nav>
     <div class="top-right">
+      <button class="sound-toggle" id="notifBellBtn" onclick="openNotificationCenter()" style="position:relative;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M6 9a6 6 0 0112 0v4l1.7 3.4a1 1 0 01-.9 1.6H5.2a1 1 0 01-.9-1.6L6 13V9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 20a2 2 0 004 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span class="badge" id="notifBadge" style="position:absolute;top:-4px;left:-4px;">0</span>
+      </button>
       <span class="badge" id="badge">0</span>
       <button class="sound-toggle" id="soundBtn" onclick="toggleSound()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" id="soundIcon"><path d="M4 10v4h3.5l4 3.5v-11l-4 3.5H4z" fill="currentColor"/><path d="M16 9a4.5 4.5 0 010 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundWave1"/><path d="M18.5 6.5a8 8 0 010 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundWave2" style="display:none;"/><line x1="15" y1="9" x2="20" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundMuteLine"/><line x1="20" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="soundMuteLine2"/></svg></button>
       <button class="refresh-btn" onclick="loadOrders()">تحديث</button>
@@ -433,6 +438,25 @@
     </div>
   </div>
 
+  <div class="overlay" id="notifCenterOverlay" style="display:none;" onclick="if(event.target===this)closeNotificationCenter()">
+    <div class="modal">
+      <button class="modal-close" onclick="closeNotificationCenter()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <div style="clear:both;"></div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:12px;">التنبيهات</div>
+      <div id="notifCenterList"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="permissionsOverlay" style="display:none;" onclick="if(event.target===this)closePermissions()">
+    <div class="modal">
+      <button class="modal-close" onclick="closePermissions()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <div style="clear:both;"></div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:12px;">إدارة الصلاحيات</div>
+      <div id="permStaffPicker"></div>
+      <div id="permBody" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
   <div class="bottom-nav" style="display:none;"></div>
 </div>
 
@@ -467,6 +491,10 @@
   <button class="drawer-item" id="dwAuditLog" onclick="closeDrawer();openAuditLog()">
     <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
     سجل النشاطات
+  </button>
+  <button class="drawer-item" id="dwPermissions" onclick="closeDrawer();openPermissions()">
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    الصلاحيات
   </button>
   <div class="drawer-divider"></div>
   <button class="drawer-item" id="dwAccount" onclick="switchStaffTab('account')">
@@ -662,6 +690,8 @@
     document.getElementById('accAvatar').textContent = (session.staffName || '?').charAt(0);
     loadOrders();
     setInterval(loadOrders, 15000);
+    refreshNotifBadge_();
+    setInterval(refreshNotifBadge_, 30000);
   }
 
   function switchStaffTab(tab) {
@@ -1291,6 +1321,146 @@
 
   function closeAnalytics() {
     document.getElementById('analyticsOverlay').classList.remove('open');
+  }
+
+  function openNotificationCenter() {
+    const overlay = document.getElementById('notifCenterOverlay');
+    const box = document.getElementById('notifCenterList');
+    overlay.classList.add('open');
+    box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
+
+    fetch(API_URL + '/notifications', { headers: authHeaders() })
+      .then(function (res) {
+        if (res.status === 401) { staffLogout(); throw new Error('session-expired'); }
+        return res.json();
+      })
+      .then(function (data) {
+        if (data.result !== 'success') {
+          box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذّر تحميل التنبيهات</p>';
+          return;
+        }
+        renderNotificationGroup_(box, 'عالي الأهمية', data.high, 'var(--danger)');
+        renderNotificationGroup_(box, 'مهم', data.important, 'var(--amber)', true);
+        renderNotificationGroup_(box, 'اعتيادي', data.normal, 'var(--text-mute)', true);
+        if (data.totalCount === 0) {
+          box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;padding:20px 0;">ماكو تنبيهات حاليًا</p>';
+        }
+      })
+      .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>'; });
+  }
+
+  function renderNotificationGroup_(box, title, items, color, appendMode) {
+    if (!items || items.length === 0) return;
+    if (!appendMode) box.innerHTML = '';
+    let html = '<div style="font-size:11px;font-weight:800;color:' + color + ';margin:' + (appendMode ? '14px 0 8px' : '0 0 8px') + ';">' + title + ' (' + items.length + ')</div>';
+    items.forEach(function (n) {
+      html += '<div style="background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:6px;">' +
+        '<div style="font-size:12px;font-weight:700;">' + escapeHtml_(n.title) + '</div>' +
+        '<div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;">' + escapeHtml_(n.detail) + '</div></div>';
+    });
+    box.innerHTML += html;
+  }
+
+  function closeNotificationCenter() {
+    document.getElementById('notifCenterOverlay').classList.remove('open');
+  }
+
+  function refreshNotifBadge_() {
+    fetch(API_URL + '/notifications', { headers: authHeaders() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success') return;
+        const badge = document.getElementById('notifBadge');
+        if (data.totalCount > 0) { badge.textContent = data.totalCount; badge.classList.add('show'); }
+        else { badge.classList.remove('show'); }
+      })
+      .catch(function () {});
+  }
+
+  const PERMISSION_LIST = [
+    { key: 'accounting', label: 'واجهة الحسابات' },
+    { key: 'reports', label: 'واجهة التقارير' },
+  ];
+  let __staffCache = [];
+  let __selectedStaffId = null;
+
+  function openPermissions() {
+    const overlay = document.getElementById('permissionsOverlay');
+    const picker = document.getElementById('permStaffPicker');
+    const body = document.getElementById('permBody');
+    overlay.classList.add('open');
+    picker.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
+    body.innerHTML = '';
+
+    fetch(API_URL + '/staff-list', { headers: authHeaders() })
+      .then(function (res) {
+        if (res.status === 401) { staffLogout(); throw new Error('session-expired'); }
+        return res.json();
+      })
+      .then(function (data) {
+        if (data.result !== 'success') {
+          picker.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">' + (data.error || 'تعذّر التحميل') + '</p>';
+          return;
+        }
+        __staffCache = data.staff;
+        picker.innerHTML = '<label class="pf-label" style="margin-top:0;">اختر موظف</label>' +
+          '<select class="pf-input" id="permStaffSelect" onchange="selectStaffForPermissions(this.value)">' +
+          '<option value="" disabled selected>-- اختر --</option>' +
+          data.staff.map(function (s) { return '<option value="' + s.id + '">' + escapeHtml_(s.name || s.username) + (s.isManager ? ' (مدير)' : '') + '</option>'; }).join('') +
+          '</select>';
+      })
+      .catch(function () { picker.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>'; });
+  }
+
+  function selectStaffForPermissions(staffId) {
+    __selectedStaffId = parseInt(staffId, 10);
+    const staff = __staffCache.find(function (s) { return s.id === __selectedStaffId; });
+    if (!staff) return;
+    const body = document.getElementById('permBody');
+
+    if (staff.isManager) {
+      body.innerHTML = '<p style="font-size:11.5px;color:var(--text-mute);text-align:center;padding:12px 0;">هذا الموظف "مدير" — عنده وصول كامل لكل شي تلقائيًا</p>';
+      return;
+    }
+
+    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    PERMISSION_LIST.forEach(function (p) {
+      const on = !!staff.permissions[p.key];
+      html += '<label style="display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;cursor:pointer;">' +
+        '<input type="checkbox" id="perm_' + p.key + '" ' + (on ? 'checked' : '') + ' style="width:16px;height:16px;">' +
+        p.label + '</label>';
+    });
+    html += '</div><button class="submit-btn" style="margin-top:14px;" onclick="savePermissions()">حفظ الصلاحيات</button>' +
+      '<div class="msg" id="permMsg" style="display:none;"></div>';
+    body.innerHTML = html;
+  }
+
+  function savePermissions() {
+    if (!__selectedStaffId) return;
+    const permissions = {};
+    PERMISSION_LIST.forEach(function (p) { permissions[p.key] = document.getElementById('perm_' + p.key).checked; });
+
+    fetch(API_URL + '/update-staff-permissions', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ staffId: __selectedStaffId, permissions: permissions }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        const msg = document.getElementById('permMsg');
+        if (data.result !== 'success') {
+          msg.className = 'msg error'; msg.textContent = data.error || 'تعذّر الحفظ'; msg.style.display = 'block';
+          return;
+        }
+        msg.className = 'msg success'; msg.textContent = 'تم الحفظ بنجاح'; msg.style.display = 'block';
+      })
+      .catch(function () {
+        const msg = document.getElementById('permMsg');
+        msg.className = 'msg error'; msg.textContent = 'تعذر الاتصال بالخادم'; msg.style.display = 'block';
+      });
+  }
+
+  function closePermissions() {
+    document.getElementById('permissionsOverlay').classList.remove('open');
   }
 
   function switchAnalyticsPeriod(period) {
