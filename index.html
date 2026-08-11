@@ -302,6 +302,15 @@
           إضافة مصروف جديد
         </button>
         <div id="expensesList"></div>
+
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
+          <div style="font-size:12.5px;font-weight:800;margin-bottom:10px;">قفل الفترات المالية</div>
+          <div id="lockedPeriodsList" style="margin-bottom:10px;"></div>
+          <div style="display:flex;gap:6px;">
+            <input type="month" id="lockPeriodInput" class="pf-input" style="flex:1;">
+            <button class="acc-audit-btn" style="width:auto;margin-top:0;padding:0 16px;" onclick="lockPeriod()">قفل</button>
+          </div>
+        </div>
       </div>
 
       <div id="accReceiptsPanel" style="display:none;">
@@ -917,6 +926,11 @@
       '<div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid var(--line);font-weight:800;">' +
       '<span>المجموع</span><span style="color:var(--accent-dark);">' + Number(o.total).toLocaleString() + ' د.ع</span></div>' +
       '<div style="margin-top:16px;">' +
+      '<label style="font-size:11px;font-weight:700;color:var(--text-dim);">ملاحظة الطلب (داخلية، للموظفين)</label>' +
+      '<textarea id="orderNoteText" rows="2" placeholder="مثال: التوصيل بعد 6 مساءً..." style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:12px;margin-top:6px;margin-bottom:8px;">' + escapeHtml_(o.orderNote || '') + '</textarea>' +
+      '<button onclick="saveOrderNote(' + o.id + ')" style="width:100%;background:#fff;color:var(--accent-dark);border:1.5px solid var(--line);padding:10px;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;">حفظ الملاحظة</button>' +
+      '</div>' +
+      '<div style="margin-top:6px;">' +
       '<label style="font-size:11px;font-weight:700;color:var(--text-dim);">تغيير الحالة</label>' +
       '<select id="statusSelect" style="width:100%;padding:11px;border-radius:12px;border:1px solid var(--line);margin-top:6px;font-family:inherit;font-size:13px;">' +
       COLUMNS.map(function (c) { return '<option value="' + c.key + '" ' + (c.key === o.status ? 'selected' : '') + '>' + c.label + '</option>'; }).join('') +
@@ -968,6 +982,33 @@
       .catch(function () {
         btn.disabled = false; btn.textContent = originalText;
         alert('تعذر الاتصال بالخادم — تأكد من الإنترنت وحاول مرة ثانية.');
+      });
+  }
+
+  function saveOrderNote(orderId) {
+    const note = document.getElementById('orderNoteText').value.trim();
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
+
+    fetch(API_URL + '/update-order-note', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ orderId: orderId, note: note }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        btn.disabled = false;
+        if (data.result === 'success') {
+          btn.textContent = 'تم الحفظ';
+          const o = orders.find(function (x) { return x.id === orderId; });
+          if (o) o.orderNote = note;
+          setTimeout(function () { btn.textContent = originalText; }, 1500);
+        } else {
+          btn.textContent = originalText;
+        }
+      })
+      .catch(function () {
+        btn.disabled = false; btn.textContent = originalText;
       });
   }
 
@@ -1054,7 +1095,7 @@
       document.getElementById('acc' + t.charAt(0).toUpperCase() + t.slice(1) + 'Panel').style.display = (t === tab) ? 'block' : 'none';
     });
     document.getElementById('accBreadcrumbCurrent').textContent = __accountingTabLabels[tab] || tab;
-    if (tab === 'expenses') loadExpenses();
+    if (tab === 'expenses') { loadExpenses(); loadLockedPeriods(); }
     if (tab === 'receipts') loadReceipts();
     if (tab === 'pricing') loadPricing();
   }
@@ -1096,6 +1137,41 @@
         }).join('');
       })
       .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر تحميل المصروفات</p>'; });
+  }
+
+  function loadLockedPeriods() {
+    const box = document.getElementById('lockedPeriodsList');
+    if (!box) return;
+    box.innerHTML = '<p style="font-size:11px;color:var(--text-mute);">جارٍ التحميل...</p>';
+    fetch(API_URL + '/locked-periods', { headers: authHeaders() })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result !== 'success' || !data.periods || data.periods.length === 0) {
+          box.innerHTML = '<p style="font-size:11px;color:var(--text-mute);">ماكو فترات مقفولة بعد</p>';
+          return;
+        }
+        box.innerHTML = data.periods.map(function (p) {
+          return '<div style="display:flex;align-items:center;gap:6px;background:var(--bg);border-radius:8px;padding:6px 10px;margin-bottom:5px;font-size:11px;font-weight:700;color:var(--text-dim);">' +
+            '<svg viewBox="0 0 24 24" width="12" height="12" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' + p + '</div>';
+        }).join('');
+      })
+      .catch(function () { box.innerHTML = '<p style="font-size:11px;color:var(--danger);">تعذر التحميل</p>'; });
+  }
+
+  function lockPeriod() {
+    const value = document.getElementById('lockPeriodInput').value;
+    if (!value) return;
+    if (!confirm('تأكيد قفل فترة ' + value + ' نهائيًا؟ ما راح تقدر تعدّل مصروفات هذي الفترة بعدها.')) return;
+    fetch(API_URL + '/lock-period', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ period: value }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.result === 'success') { document.getElementById('lockPeriodInput').value = ''; loadLockedPeriods(); }
+        else alert('تعذّر القفل: ' + (data.error || ''));
+      })
+      .catch(function () { alert('تعذر الاتصال بالخادم'); });
   }
 
   function openAddExpenseForm() {
@@ -1626,6 +1702,7 @@
         box.innerHTML = '<div class="cust-info-card">' +
           '<div style="font-size:15px;font-weight:800;">' + escapeHtml_(c.name) + '</div>' +
           '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + escapeHtml_(c.phone) + ' — رقم الزبون: ' + escapeHtml_(c.code) + '</div>' +
+          '<div id="custRatingStars" style="display:flex;gap:4px;margin-top:10px;"></div>' +
           '<div style="margin-top:12px;">' + ordersHtml + '</div>' +
           '<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;">' +
           '<div style="font-size:13px;font-weight:800;margin-bottom:8px;">ملاحظات على الزبون</div>' +
@@ -1633,9 +1710,31 @@
           '<textarea id="newNoteText" rows="2" placeholder="اكتب ملاحظة جديدة..." style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:12px;margin-bottom:8px;"></textarea>' +
           '<button class="submit-btn" style="padding:9px;font-size:12px;" onclick="addCustomerNote()">إضافة ملاحظة</button>' +
           '</div></div>';
+        renderCustomerStars(c.rating || 0);
         loadCustomerNotes();
       })
       .catch(function () { box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>'; });
+  }
+
+  function renderCustomerStars(currentRating) {
+    const box = document.getElementById('custRatingStars');
+    if (!box) return;
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      const filled = i <= currentRating;
+      html += '<span onclick="rateCustomerStar(' + i + ')" style="cursor:pointer;display:inline-flex;">' +
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="' + (filled ? 'var(--amber)' : 'none') + '" stroke="var(--amber)" stroke-width="1.5"><path d="M12 3l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20l1.4-6.3L3 9.4l6.4-.6L12 3z" stroke-linejoin="round"/></svg></span>';
+    }
+    box.innerHTML = html;
+  }
+
+  function rateCustomerStar(stars) {
+    if (!__currentNotesPhone) return;
+    renderCustomerStars(stars);
+    fetch(API_URL + '/rate-customer', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ phone: __currentNotesPhone, rating: stars }),
+    }).catch(function () {});
   }
 
   function loadCustomerNotes() {
