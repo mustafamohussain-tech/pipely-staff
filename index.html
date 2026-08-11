@@ -53,7 +53,23 @@
 
   #appContent{display:none}
 
-  .board{display:flex;gap:12px;overflow-x:auto;padding:16px;align-items:flex-start}
+  .board{display:none;gap:12px;overflow-x:auto;padding:16px;align-items:flex-start}
+
+  .mobile-orders{padding:12px;}
+  .mo-tabs{display:flex;gap:3px;margin-bottom:12px;overflow-x:hidden;}
+  .mo-tab{flex:1;min-width:0;min-height:48px;text-align:center;font-size:9px;font-weight:700;
+    padding:6px 1px;border-radius:10px;border:none;cursor:pointer;background:transparent;
+    color:var(--text-mute);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-family:inherit;}
+  .mo-tab.on{background:var(--bg);color:var(--accent-dark);}
+  .mo-tab svg{width:15px;height:15px;}
+  .mo-tab .mo-count{font-size:8px;opacity:.75;}
+  .mo-empty{text-align:center;padding:2.5rem 0;color:var(--text-mute);font-size:11.5px;}
+  .mo-card{background:var(--bg);border-radius:12px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--line);cursor:pointer;}
+  .mo-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+  .mo-card-code{display:flex;align-items:center;gap:6px;font-weight:800;font-size:12.5px;}
+  .mo-card-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .mo-card-total{font-size:11px;font-weight:700;color:var(--accent-dark);}
+  .mo-card-name{font-size:11px;color:var(--text-dim);padding-right:13px;}
   .col{min-width:260px;background:#efeaf7;border-radius:16px;padding:12px;max-height:calc(100vh - 170px);
     display:flex;flex-direction:column}
   .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px}
@@ -180,11 +196,13 @@
   /* ===================================================================
      التكيّف مع شاشات الحاسوب — يفعّل تلقائيًا فوق 900px عرض الشاشة
      =================================================================== */
-  .desktop-nav{display:none}
-
   .hamburger-btn{width:36px;height:36px;border-radius:9px;border:none;background:none;cursor:pointer;
     display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;}
   .hamburger-btn span{width:18px;height:2px;background:#fff;border-radius:2px;display:block;}
+
+  .sidebar-toggle-btn{width:36px;height:36px;border-radius:9px;border:none;background:none;cursor:pointer;
+    display:none;flex-direction:column;justify-content:center;align-items:center;gap:4px;}
+  .sidebar-toggle-btn span{width:18px;height:2px;background:#fff;border-radius:2px;display:block;}
 
   .drawer-overlay{position:fixed;inset:0;background:rgba(20,16,36,.45);z-index:30;display:none;}
   .drawer-overlay.open{display:block;}
@@ -210,17 +228,20 @@
     body{padding-bottom:0}
 
     .topbar{padding:16px 32px}
-    .desktop-nav{display:flex;gap:6px}
-    .desktop-nav-btn{background:none;border:none;color:rgba(255,255,255,.85);font-size:13px;font-weight:700;
-      padding:9px 16px;border-radius:20px;cursor:pointer;font-family:inherit}
-    .desktop-nav-btn.on{background:rgba(255,255,255,.2);color:#fff}
-    .desktop-nav-btn:hover{background:rgba(255,255,255,.12)}
     .hamburger-btn{display:none}
+    .sidebar-toggle-btn{display:flex}
 
     .bottom-nav{display:none}
     .drawer-overlay,.drawer{display:none !important}
 
-    .board{padding:24px 32px;justify-content:flex-start;flex-wrap:nowrap}
+    .sidebar{display:flex;flex-direction:column;transition:transform .2s ease;}
+    #appContent{padding-right:220px;transition:padding-right .2s ease;}
+
+    body.sidebar-hidden .sidebar{transform:translateX(240px);}
+    body.sidebar-hidden #appContent{padding-right:0;}
+
+    .board{display:flex;padding:24px 32px;justify-content:flex-start;flex-wrap:nowrap}
+    .mobile-orders{display:none}
     .col{min-width:0;flex:1;max-width:320px;max-height:calc(100vh - 110px)}
 
     .inv-wrap{max-width:1100px;margin:0 auto;padding:24px 32px;display:grid;
@@ -231,9 +252,58 @@
 
     .modal{max-width:460px}
   }
+
+  .sidebar{display:none;position:fixed;top:0;bottom:0;right:0;width:220px;background:#fff;
+    border-left:1px solid var(--line);padding:18px 12px;z-index:12;overflow-y:auto;}
+  .sidebar-logo{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;
+    padding:0 10px;margin-bottom:20px;color:var(--accent-dark);}
+  .sb-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;
+    font-size:12.5px;font-weight:700;color:var(--text-dim);margin-bottom:3px;cursor:pointer;
+    border:none;background:none;width:100%;text-align:right;font-family:inherit;min-height:42px;}
+  .sb-item.on{background:rgba(124,92,255,.1);color:var(--accent-dark);}
+  .sb-item:hover{background:var(--bg);}
+  .sb-divider{height:1px;background:var(--line);margin:10px 0;}
 </style>
 </head>
 <body>
+
+<div class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span> لوحة الموظفين</div>
+  <button class="sb-item on" id="sbKanban" onclick="switchStaffTab('kanban')">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="3" y="4" width="6" height="16" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="9.5" y="4" width="6" height="10" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="16" y="4" width="6" height="13" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+    الطلبات
+  </button>
+  <button class="sb-item" id="sbInventory" onclick="switchStaffTab('inventory')">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M3.5 8L12 4l8.5 4-8.5 4-8.5-4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3.5 8v8l8.5 4 8.5-4V8" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+    المخزون
+  </button>
+  <button class="sb-item" id="sbCustomers" onclick="switchStaffTab('customers')">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M3 20c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    الزبائن
+  </button>
+  <div class="sb-divider"></div>
+  <button class="sb-item" id="sbAccounting" onclick="switchStaffTab('accounting')">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="3" y="6" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.7"/></svg>
+    الحسابات
+  </button>
+  <button class="sb-item" id="sbReports" onclick="switchStaffTab('reports')">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+    التقارير
+  </button>
+  <button class="sb-item" id="sbAuditlog" onclick="switchStaffTab('auditlog')">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    سجل النشاطات
+  </button>
+  <button class="sb-item" id="sbPermissions" onclick="switchStaffTab('permissions')">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    الصلاحيات
+  </button>
+  <div class="sb-divider"></div>
+  <button class="sb-item" id="sbAccount" onclick="switchStaffTab('account')">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><circle cx="12" cy="8" r="3.3" stroke="currentColor" stroke-width="1.7"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    حسابي
+  </button>
+</div>
 
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
@@ -254,16 +324,8 @@
 <div id="appContent">
   <div class="topbar">
     <button class="hamburger-btn" onclick="openDrawer()" aria-label="القائمة"><span></span><span></span><span></span></button>
+    <button class="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="إخفاء/إظهار القائمة"><span></span><span></span><span></span></button>
     <div class="logo"><span class="dot"></span> لوحة الموظفين</div>
-    <nav class="desktop-nav">
-      <button class="desktop-nav-btn on" id="dnavKanban" onclick="switchStaffTab('kanban')">الطلبات</button>
-      <button class="desktop-nav-btn" id="dnavInventory" onclick="switchStaffTab('inventory')">المخزون</button>
-      <button class="desktop-nav-btn" id="dnavCustomers" onclick="switchStaffTab('customers')">الزبائن</button>
-      <button class="desktop-nav-btn" id="dnavAccounting" onclick="switchStaffTab('accounting')">الحسابات</button>
-      <button class="desktop-nav-btn" id="dnavReports" onclick="openAnalytics()">التقارير</button>
-      <button class="desktop-nav-btn" id="dnavAuditLog" onclick="openAuditLog()">سجل النشاطات</button>
-      <button class="desktop-nav-btn" id="dnavPermissions" onclick="openPermissions()">الصلاحيات</button>
-    </nav>
     <div class="top-right">
       <button class="sound-toggle" id="notifBellBtn" onclick="openNotificationCenter()" style="position:relative;">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M6 9a6 6 0 0112 0v4l1.7 3.4a1 1 0 01-.9 1.6H5.2a1 1 0 01-.9-1.6L6 13V9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 20a2 2 0 004 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
@@ -383,6 +445,10 @@
   </div>
 
   <div class="tab-view" id="kanbanView">
+    <div class="mobile-orders" id="mobileOrders">
+      <div class="mo-tabs" id="moTabs"></div>
+      <div class="mo-list" id="moList"></div>
+    </div>
     <div class="board" id="board"></div>
   </div>
 
@@ -424,26 +490,22 @@
     </div>
   </div>
 
-  <div class="overlay" id="auditLogOverlay" style="display:none;" onclick="if(event.target===this)closeAuditLog()">
-    <div class="modal">
-      <button class="modal-close" onclick="closeAuditLog()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-      <div style="clear:both;"></div>
-      <div style="font-size:16px;font-weight:800;margin-bottom:12px;">سجل النشاطات</div>
+  <div class="tab-view" id="auditlogView" style="display:none;">
+    <div style="padding:14px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:12px;">سجل النشاطات</div>
       <div id="auditLogList"></div>
     </div>
   </div>
 
-  <div class="overlay" id="analyticsOverlay" style="display:none;" onclick="if(event.target===this)closeAnalytics()">
-    <div class="modal" style="max-width:480px;">
-      <button class="modal-close" onclick="closeAnalytics()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-      <div style="clear:both;"></div>
-      <div style="font-size:16px;font-weight:800;margin-bottom:12px;">التحليلات والتقارير</div>
-      <div style="display:flex;gap:6px;background:var(--bg);border-radius:12px;padding:3px;margin-bottom:14px;">
+  <div class="tab-view" id="reportsView" style="display:none;">
+    <div style="padding:14px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:12px;">التحليلات والتقارير</div>
+      <div style="display:flex;gap:6px;background:var(--bg);border-radius:12px;padding:3px;margin-bottom:14px;max-width:480px;">
         <button type="button" class="analytics-period-tab on" id="apTabToday" onclick="switchAnalyticsPeriod('today')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;background:none;font-family:inherit;">اليوم</button>
         <button type="button" class="analytics-period-tab" id="apTabWeek" onclick="switchAnalyticsPeriod('week')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;background:none;font-family:inherit;">آخر أسبوع</button>
         <button type="button" class="analytics-period-tab" id="apTabMonth" onclick="switchAnalyticsPeriod('month')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:12px;font-weight:700;background:none;font-family:inherit;">آخر شهر</button>
       </div>
-      <div id="analyticsResult"></div>
+      <div id="analyticsResult" style="max-width:480px;"></div>
     </div>
   </div>
 
@@ -456,13 +518,11 @@
     </div>
   </div>
 
-  <div class="overlay" id="permissionsOverlay" style="display:none;" onclick="if(event.target===this)closePermissions()">
-    <div class="modal">
-      <button class="modal-close" onclick="closePermissions()"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;display:inline-block;"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-      <div style="clear:both;"></div>
-      <div style="font-size:16px;font-weight:800;margin-bottom:12px;">إدارة الصلاحيات</div>
-      <div id="permStaffPicker"></div>
-      <div id="permBody" style="margin-top:12px;"></div>
+  <div class="tab-view" id="permissionsView" style="display:none;">
+    <div style="padding:14px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:12px;">إدارة الصلاحيات</div>
+      <div id="permStaffPicker" style="max-width:480px;"></div>
+      <div id="permBody" style="margin-top:12px;max-width:480px;"></div>
     </div>
   </div>
 
@@ -493,15 +553,15 @@
     <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="3" y="6" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.7"/></svg>
     الحسابات
   </button>
-  <button class="drawer-item" id="dwReports" onclick="closeDrawer();openAnalytics()">
+  <button class="drawer-item" id="dwReports" onclick="switchStaffTab('reports')">
     <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
     التقارير
   </button>
-  <button class="drawer-item" id="dwAuditLog" onclick="closeDrawer();openAuditLog()">
+  <button class="drawer-item" id="dwAuditlog" onclick="switchStaffTab('auditlog')">
     <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
     سجل النشاطات
   </button>
-  <button class="drawer-item" id="dwPermissions" onclick="closeDrawer();openPermissions()">
+  <button class="drawer-item" id="dwPermissions" onclick="switchStaffTab('permissions')">
     <svg viewBox="0 0 24 24" fill="none" width="17" height="17"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
     الصلاحيات
   </button>
@@ -703,23 +763,25 @@
     setInterval(refreshNotifBadge_, 30000);
   }
 
-  function switchStaffTab(tab) {
-    ['kanban', 'inventory', 'customers', 'account', 'accounting'].forEach(function (t) {
-      document.getElementById(t + 'View').style.display = (t === tab) ? 'block' : 'none';
+  const ALL_TABS = ['kanban', 'inventory', 'customers', 'accounting', 'reports', 'auditlog', 'permissions', 'account'];
+  window.switchStaffTab = function (tab) {
+    ALL_TABS.forEach(function (t) {
+      var view = document.getElementById(t + 'View');
+      if (view) view.style.display = (t === tab) ? 'block' : 'none';
     });
-    document.getElementById('dnavKanban').classList.toggle('on', tab === 'kanban');
-    document.getElementById('dnavInventory').classList.toggle('on', tab === 'inventory');
-    document.getElementById('dnavCustomers').classList.toggle('on', tab === 'customers');
-    document.getElementById('dnavAccounting').classList.toggle('on', tab === 'accounting');
-    document.getElementById('dwKanban').classList.toggle('on', tab === 'kanban');
-    document.getElementById('dwInventory').classList.toggle('on', tab === 'inventory');
-    document.getElementById('dwCustomers').classList.toggle('on', tab === 'customers');
-    document.getElementById('dwAccounting').classList.toggle('on', tab === 'accounting');
-    document.getElementById('dwAccount').classList.toggle('on', tab === 'account');
+    ALL_TABS.forEach(function (t) {
+      var sb = document.getElementById('sb' + t.charAt(0).toUpperCase() + t.slice(1));
+      if (sb) sb.classList.toggle('on', t === tab);
+      var dw = document.getElementById('dw' + t.charAt(0).toUpperCase() + t.slice(1));
+      if (dw) dw.classList.toggle('on', t === tab);
+    });
     if (tab === 'inventory') loadInventory();
     if (tab === 'accounting') { loadAccountingOverview(); switchAccountingTab('expenses'); }
+    if (tab === 'reports') openAnalytics();
+    if (tab === 'auditlog') openAuditLog();
+    if (tab === 'permissions') openPermissions();
     closeDrawer();
-  }
+  };
 
   function openDrawer() {
     document.getElementById('drawerOverlay').classList.add('open');
@@ -735,6 +797,10 @@
   function closeDrawer() {
     document.getElementById('drawerOverlay').classList.remove('open');
     document.getElementById('drawer').classList.remove('open');
+  }
+
+  function toggleSidebar() {
+    document.body.classList.toggle('sidebar-hidden');
   }
 
   function toggleSound() {
@@ -773,6 +839,7 @@
 
         orders = newOrders;
         renderBoard();
+        renderMobileOrders();
       })
       .catch(function () {});
   }
@@ -902,6 +969,43 @@
     }
     dragState = null;
   });
+
+  let __moActiveStatus = COLUMNS[0].key;
+
+  function renderMobileOrders() {
+    const tabsBox = document.getElementById('moTabs');
+    const listBox = document.getElementById('moList');
+    if (!tabsBox || !listBox) return;
+
+    tabsBox.innerHTML = COLUMNS.map(function (col) {
+      const count = orders.filter(function (o) { return o.status === col.key; }).length;
+      const on = col.key === __moActiveStatus;
+      return '<button type="button" class="mo-tab' + (on ? ' on' : '') + '" onclick="switchMobileTab(\'' + col.key.replace(/'/g, "\\'") + '\')">' +
+        col.ic + '<span>' + col.label + '</span><span class="mo-count">' + count + '</span></button>';
+    }).join('');
+
+    const filtered = orders.filter(function (o) { return o.status === __moActiveStatus; });
+    if (filtered.length === 0) {
+      listBox.innerHTML = '<div class="mo-empty">ماكو طلبات بهذي الحالة</div>';
+      return;
+    }
+    const dotColorMap = { 'c-new': 'var(--blue)', 'c-prep': 'var(--amber)', 'c-ready': 'var(--accent)', 'c-done': 'var(--green)', 'c-problem': 'var(--danger)' };
+    const col = COLUMNS.find(function (c) { return c.key === __moActiveStatus; });
+    const dotColor = col ? (dotColorMap[col.cls] || 'var(--accent)') : 'var(--accent)';
+    listBox.innerHTML = filtered.map(function (o) {
+      return '<div class="mo-card" onclick="openDetail(' + o.id + ')">' +
+        '<div class="mo-card-top">' +
+        '<div class="mo-card-code"><span class="mo-card-dot" style="background:' + dotColor + ';"></span>' + escapeHtml_(o.orderCode || ('#' + o.id)) + '</div>' +
+        '<div class="mo-card-total">' + Number(o.total || 0).toLocaleString() + ' د.ع</div></div>' +
+        '<div class="mo-card-name">' + escapeHtml_(o.customerName || '') + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function switchMobileTab(statusKey) {
+    __moActiveStatus = statusKey;
+    renderMobileOrders();
+  }
 
   function openDetail(orderId) {
     const o = orders.find(function (x) { return x.id === orderId; });
@@ -1050,10 +1154,9 @@
     document.getElementById('invoiceOverlay').classList.remove('open');
   }
 
-  function openAuditLog() {
-    const overlay = document.getElementById('auditLogOverlay');
-    const list = document.getElementById('auditLogList');
-    overlay.classList.add('open');
+  window.openAuditLog = function () {
+    var list = document.getElementById('auditLogList');
+    if (!list) { console.error('عناصر سجل النشاطات غير موجودة بالصفحة'); return; }
     list.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
     fetch(API_URL + '/audit-log', { headers: authHeaders() })
       .then(function (res) {
@@ -1066,7 +1169,7 @@
           return;
         }
         list.innerHTML = data.log.map(function (entry) {
-          const when = entry.createdAt ? new Date(entry.createdAt).toLocaleString('ar-IQ') : '';
+          var when = entry.createdAt ? new Date(entry.createdAt).toLocaleString('ar-IQ') : '';
           return '<div style="border-bottom:1px solid var(--line);padding:10px 0;font-size:12px;">' +
             '<div style="display:flex;justify-content:space-between;font-weight:700;">' +
             '<span>' + escapeHtml_(entry.staffUsername) + '</span>' +
@@ -1076,14 +1179,11 @@
             '</div>';
         }).join('');
       })
-      .catch(function () {
+      .catch(function (err) {
+        console.error('audit-log error:', err);
         list.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر تحميل السجل</p>';
       });
-  }
-
-  function closeAuditLog() {
-    document.getElementById('auditLogOverlay').classList.remove('open');
-  }
+  };
 
   let __accountingTab = 'expenses';
   let __expensesCache = {};
@@ -1367,13 +1467,13 @@
   const __analyticsPeriodLabels = { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر' };
   const __analyticsStatKeyByPeriod = { today: 'today', week: 'week', month: 'month' };
 
-  function openAnalytics() {
-    const overlay = document.getElementById('analyticsOverlay');
-    const box = document.getElementById('analyticsResult');
-    overlay.classList.add('open');
+  window.openAnalytics = function () {
+    var box = document.getElementById('analyticsResult');
+    if (!box) { console.error('عناصر التقارير غير موجودة بالصفحة'); return; }
     __analyticsPeriod = 'today';
     ['today', 'week', 'month'].forEach(function (p) {
-      document.getElementById('apTab' + p.charAt(0).toUpperCase() + p.slice(1)).classList.toggle('on', p === 'today');
+      var tab = document.getElementById('apTab' + p.charAt(0).toUpperCase() + p.slice(1));
+      if (tab) tab.classList.toggle('on', p === 'today');
     });
     box.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
 
@@ -1390,14 +1490,11 @@
         __analyticsData = data;
         renderAnalytics();
       })
-      .catch(function () {
+      .catch(function (err) {
+        console.error('analytics error:', err);
         box.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>';
       });
-  }
-
-  function closeAnalytics() {
-    document.getElementById('analyticsOverlay').classList.remove('open');
-  }
+  };
 
   function openNotificationCenter() {
     const overlay = document.getElementById('notifCenterOverlay');
@@ -1460,11 +1557,10 @@
   let __staffCache = [];
   let __selectedStaffId = null;
 
-  function openPermissions() {
-    const overlay = document.getElementById('permissionsOverlay');
-    const picker = document.getElementById('permStaffPicker');
-    const body = document.getElementById('permBody');
-    overlay.classList.add('open');
+  window.openPermissions = function () {
+    var picker = document.getElementById('permStaffPicker');
+    var body = document.getElementById('permBody');
+    if (!picker || !body) { console.error('عناصر الصلاحيات غير موجودة بالصفحة'); return; }
     picker.innerHTML = '<p style="text-align:center;color:var(--text-mute);font-size:12px;">جارٍ التحميل...</p>';
     body.innerHTML = '';
 
@@ -1485,23 +1581,27 @@
           data.staff.map(function (s) { return '<option value="' + s.id + '">' + escapeHtml_(s.name || s.username) + (s.isManager ? ' (مدير)' : '') + '</option>'; }).join('') +
           '</select>';
       })
-      .catch(function () { picker.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>'; });
-  }
+      .catch(function (err) {
+        console.error('staff-list error:', err);
+        picker.innerHTML = '<p style="text-align:center;color:var(--danger);font-size:12px;">تعذر الاتصال بالخادم</p>';
+      });
+  };
 
-  function selectStaffForPermissions(staffId) {
+  window.selectStaffForPermissions = function (staffId) {
     __selectedStaffId = parseInt(staffId, 10);
-    const staff = __staffCache.find(function (s) { return s.id === __selectedStaffId; });
+    var staff = __staffCache.find(function (s) { return s.id === __selectedStaffId; });
     if (!staff) return;
-    const body = document.getElementById('permBody');
+    var body = document.getElementById('permBody');
+    if (!body) return;
 
     if (staff.isManager) {
       body.innerHTML = '<p style="font-size:11.5px;color:var(--text-mute);text-align:center;padding:12px 0;">هذا الموظف "مدير" — عنده وصول كامل لكل شي تلقائيًا</p>';
       return;
     }
 
-    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
     PERMISSION_LIST.forEach(function (p) {
-      const on = !!staff.permissions[p.key];
+      var on = !!staff.permissions[p.key];
       html += '<label style="display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;cursor:pointer;">' +
         '<input type="checkbox" id="perm_' + p.key + '" ' + (on ? 'checked' : '') + ' style="width:16px;height:16px;">' +
         p.label + '</label>';
@@ -1509,12 +1609,15 @@
     html += '</div><button class="submit-btn" style="margin-top:14px;" onclick="savePermissions()">حفظ الصلاحيات</button>' +
       '<div class="msg" id="permMsg" style="display:none;"></div>';
     body.innerHTML = html;
-  }
+  };
 
-  function savePermissions() {
+  window.savePermissions = function () {
     if (!__selectedStaffId) return;
-    const permissions = {};
-    PERMISSION_LIST.forEach(function (p) { permissions[p.key] = document.getElementById('perm_' + p.key).checked; });
+    var permissions = {};
+    PERMISSION_LIST.forEach(function (p) {
+      var el = document.getElementById('perm_' + p.key);
+      permissions[p.key] = el ? el.checked : false;
+    });
 
     fetch(API_URL + '/update-staff-permissions', {
       method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
@@ -1522,30 +1625,29 @@
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        const msg = document.getElementById('permMsg');
+        var msg = document.getElementById('permMsg');
+        if (!msg) return;
         if (data.result !== 'success') {
           msg.className = 'msg error'; msg.textContent = data.error || 'تعذّر الحفظ'; msg.style.display = 'block';
           return;
         }
         msg.className = 'msg success'; msg.textContent = 'تم الحفظ بنجاح'; msg.style.display = 'block';
       })
-      .catch(function () {
-        const msg = document.getElementById('permMsg');
-        msg.className = 'msg error'; msg.textContent = 'تعذر الاتصال بالخادم'; msg.style.display = 'block';
+      .catch(function (err) {
+        console.error('update-staff-permissions error:', err);
+        var msg = document.getElementById('permMsg');
+        if (msg) { msg.className = 'msg error'; msg.textContent = 'تعذر الاتصال بالخادم'; msg.style.display = 'block'; }
       });
-  }
+  };
 
-  function closePermissions() {
-    document.getElementById('permissionsOverlay').classList.remove('open');
-  }
-
-  function switchAnalyticsPeriod(period) {
+  window.switchAnalyticsPeriod = function (period) {
     __analyticsPeriod = period;
     ['today', 'week', 'month'].forEach(function (p) {
-      document.getElementById('apTab' + p.charAt(0).toUpperCase() + p.slice(1)).classList.toggle('on', p === period);
+      var tab = document.getElementById('apTab' + p.charAt(0).toUpperCase() + p.slice(1));
+      if (tab) tab.classList.toggle('on', p === period);
     });
     renderAnalytics();
-  }
+  };
 
   function renderAnalytics() {
     if (!__analyticsData) return;
