@@ -72,7 +72,7 @@
   .mo-card-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
   .mo-card-total{font-size:11px;font-weight:700;color:var(--accent-dark);}
   .mo-card-name{font-size:11px;color:var(--text-dim);padding-right:13px;}
-  .col{min-width:260px;background:#fdf3e7;border-radius:16px;padding:12px;max-height:calc(100vh - 170px);
+  .col{min-width:260px;background:#e3e6e9;border-radius:16px;padding:12px;max-height:calc(100vh - 170px);
     display:flex;flex-direction:column}
   .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px}
   .col-title{font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:6px}
@@ -98,9 +98,25 @@
     border-radius:9px;padding:6px 9px}
   .oprice{font-size:12.5px;font-weight:800;color:var(--accent-dark);margin-top:8px}
   .quick-move-row{display:flex;justify-content:space-between;gap:6px;margin-top:9px}
-  .quick-move-btn{flex:1;font-size:9px;font-weight:700;padding:6px 4px;border-radius:8px;
+  .quick-move-btn{flex:1;font-size:10px;font-weight:700;padding:7px 5px;border-radius:8px;min-height:32px;line-height:1.35;
     border:1px solid var(--line);background:var(--bg);color:var(--text-dim);cursor:pointer;font-family:inherit}
-  .quick-move-btn:hover{background:rgba(35,35,90,.1);color:var(--accent-dark)}
+  .quick-move-btn.next{background:rgba(35,35,90,.08);color:var(--navy);border-color:transparent}
+  .quick-move-btn:hover{background:rgba(35,35,90,.14);color:var(--accent-dark)}
+
+  /* هذي الكلاسات مستخدمة بنص نوافذ اللوحة (حفظ المنتج، البحث، المصروفات، الصلاحيات...)
+     بس ما كانت معرّفة أبدًا — فكانت تطلع أزرار رمادية بدائية ورسائل بلا لون */
+  button,select,input,textarea{font-family:inherit}
+  .submit-btn{width:100%;background:linear-gradient(120deg,var(--accent),var(--accent-dark));color:#fff;border:none;
+    padding:13px;border-radius:14px;font-size:13px;font-weight:800;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    box-shadow:0 10px 20px -12px var(--accent-glow);
+    transition:transform .15s cubic-bezier(.4,0,.2,1),box-shadow .15s cubic-bezier(.4,0,.2,1),opacity .15s}
+  .submit-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 14px 24px -12px var(--accent-glow)}
+  .submit-btn:active:not(:disabled){transform:scale(.98)}
+  .submit-btn:disabled{opacity:.6;cursor:default}
+  .msg{margin-top:12px;padding:11px 12px;border-radius:12px;font-size:12.5px;text-align:center;font-weight:700}
+  .msg.success{background:rgba(53,129,53,.1);color:var(--green)}
+  .msg.error{background:rgba(194,84,84,.1);color:var(--danger)}
 
   .inv-wrap{padding:16px;max-width:600px;margin:0 auto}
   .inv-card{background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:10px;
@@ -694,9 +710,6 @@
   </div>
 </div>
 
-<audio id="alertSound" preload="auto">
-  <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=" type="audio/wav">
-</audio>
 
 <script>
   const API_URL = 'https://api.awnnak.com';
@@ -885,21 +898,49 @@
     document.body.classList.toggle('sidebar-hidden');
   }
 
-  function toggleSound() {
-    soundOn = !soundOn;
+  // ملف الصوت القديم كان فاضي (44 بايت، صفر صوت) — نولّد نغمة تنبيه
+  // مباشرة بالمتصفح عبر Web Audio، بدون أي ملف أو مكتبة
+  const SOUND_PREF_KEY = 'pipely_staff_sound';
+  let __audioCtx = null;
+  function getAudioCtx_() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!__audioCtx) __audioCtx = new AC();
+    if (__audioCtx.state === 'suspended') __audioCtx.resume().catch(function () {});
+    return __audioCtx;
+  }
+  function playChime_() {
+    const ctx = getAudioCtx_();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    [[880, 0], [1320, 0.18]].forEach(function (note) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = note[0];
+      gain.gain.setValueAtTime(0.0001, now + note[1]);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + note[1] + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + note[1] + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + note[1]);
+      osc.stop(now + note[1] + 0.4);
+    });
+  }
+  function applySoundUi_() {
     document.getElementById('soundWave2').style.display = soundOn ? 'block' : 'none';
     document.getElementById('soundMuteLine').style.display = soundOn ? 'none' : 'block';
     document.getElementById('soundMuteLine2').style.display = soundOn ? 'none' : 'block';
-    if (soundOn) {
-      const a = document.getElementById('alertSound');
-      a.play().then(function () { a.pause(); a.currentTime = 0; }).catch(function () {});
-    }
+  }
+  function toggleSound() {
+    soundOn = !soundOn;
+    try { localStorage.setItem(SOUND_PREF_KEY, soundOn ? '1' : '0'); } catch (e) {}
+    applySoundUi_();
+    if (soundOn) playChime_();
   }
   function playAlert() {
     if (!soundOn) return;
-    const a = document.getElementById('alertSound');
-    a.currentTime = 0;
-    a.play().catch(function () {});
+    playChime_();
   }
 
   function loadOrders() {
@@ -956,8 +997,8 @@
           (itemsText ? '<div class="oitems">' + itemsText + '</div>' : '') +
           '<div class="oprice">' + Number(o.total).toLocaleString() + ' د.ع</div>' +
           '<div class="quick-move-row">' +
-          (prevCol ? '<button class="quick-move-btn" onclick="event.stopPropagation();quickMove(' + o.id + ',\'' + prevCol.key + '\')">◀ ' + prevCol.label.replace(/^[^\s]+\s/, '') + '</button>' : '<span></span>') +
-          (nextCol ? '<button class="quick-move-btn" onclick="event.stopPropagation();quickMove(' + o.id + ',\'' + nextCol.key + '\')">' + nextCol.label.replace(/^[^\s]+\s/, '') + ' ▶</button>' : '<span></span>') +
+          (prevCol ? '<button class="quick-move-btn" title="رجوع إلى: ' + prevCol.label + '" onclick="event.stopPropagation();quickMove(' + o.id + ',\'' + prevCol.key + '\')">▶ ' + prevCol.label + '</button>' : '<span></span>') +
+          (nextCol ? '<button class="quick-move-btn next" title="نقل إلى: ' + nextCol.label + '" onclick="event.stopPropagation();quickMove(' + o.id + ',\'' + nextCol.key + '\')">' + nextCol.label + ' ◀</button>' : '<span></span>') +
           '</div>';
         body.appendChild(card);
         enableCardDrag(card, o.id);
@@ -1073,7 +1114,7 @@
     listBox.innerHTML = filtered.map(function (o) {
       return '<div class="mo-card" onclick="openDetail(' + o.id + ')">' +
         '<div class="mo-card-top">' +
-        '<div class="mo-card-code"><span class="mo-card-dot" style="background:' + dotColor + ';"></span>' + escapeHtml_(o.orderCode || ('#' + o.id)) + '</div>' +
+        '<div class="mo-card-code"><span class="mo-card-dot" style="background:' + dotColor + ';"></span>' + ('P-' + String(o.id).padStart(4, '0')) + '</div>' +
         '<div class="mo-card-total">' + Number(o.total || 0).toLocaleString() + ' د.ع</div></div>' +
         '<div class="mo-card-name">' + escapeHtml_(o.customerName || '') + '</div>' +
         '</div>';
@@ -1404,7 +1445,7 @@
         }
         box.innerHTML = pending.map(function (o) {
           return '<div class="acc-row"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-            '<span style="font-weight:800;font-size:12.5px;">' + escapeHtml_(o.orderCode || ('#' + o.id)) + '</span>' +
+            '<span style="font-weight:800;font-size:12.5px;">' + ('P-' + String(o.id).padStart(4, '0')) + '</span>' +
             '<span style="font-weight:700;font-size:12px;color:var(--accent-dark);">' + (o.total || 0).toLocaleString() + ' د.ع</span></div>' +
             '<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">' + escapeHtml_(o.customerName || '') + '</div>' +
             '<button class="submit-btn" style="min-height:36px;font-size:11px;" onclick="confirmReceipt(' + o.id + ')">تأكيد استلام المبلغ</button></div>';
@@ -1754,7 +1795,7 @@
       const maxQty = Math.max.apply(null, topProducts.map(function (r) { return r.quantity; }));
       html += '<div class="an-bar-list">' + topProducts.map(function (row) {
         const pct = maxQty > 0 ? Math.round((row.quantity / maxQty) * 100) : 0;
-        return '<div class="an-bar-row"><div class="an-bar-lbl">' + row.name + '</div>' +
+        return '<div class="an-bar-row"><div class="an-bar-lbl">' + escapeHtml_(row.name) + '</div>' +
           '<div class="an-bar-track"><div class="an-bar-fill" style="width:' + pct + '%;"></div></div>' +
           '<div class="an-bar-val">' + row.quantity + '</div></div>';
       }).join('') + '</div>';
@@ -1768,7 +1809,7 @@
         html += '<p style="font-size:11.5px;color:var(--text-mute);">ماكو مشاهدات مسجّلة بهذي الفترة</p>';
       } else {
         topViewed.forEach(function (row) {
-          html += '<div class="an-row"><span>' + row.name + '</span><span class="an-row-val">' + row.views + '</span></div>';
+          html += '<div class="an-row"><span>' + escapeHtml_(row.name) + '</span><span class="an-row-val">' + row.views + '</span></div>';
         });
       }
     }
@@ -1781,7 +1822,7 @@
       html += '<p style="font-size:11.5px;color:var(--text-mute);">ماكو بيانات بهذي الفترة</p>';
     } else {
       regionKeys.forEach(function (region) {
-        html += '<div class="an-row"><span>' + region + '</span><span class="an-row-val">' + regions[region] + '</span></div>';
+        html += '<div class="an-row"><span>' + escapeHtml_(region) + '</span><span class="an-row-val">' + regions[region] + '</span></div>';
       });
     }
 
@@ -1824,7 +1865,7 @@
       html += '<p style="font-size:11.5px;color:var(--text-mute);">ماكو بيانات بعد</p>';
     } else {
       d.staffPerformance.forEach(function (row) {
-        html += '<div class="an-row"><span>' + row.staff + '</span><span class="an-row-val">' + row.ordersHandled + '</span></div>';
+        html += '<div class="an-row"><span>' + escapeHtml_(row.staff) + '</span><span class="an-row-val">' + row.ordersHandled + '</span></div>';
       });
     }
 
@@ -2113,6 +2154,10 @@
   }
 
   (function init() {
+    try { soundOn = localStorage.getItem(SOUND_PREF_KEY) === '1'; } catch (e) {}
+    applySoundUi_();
+    // المتصفح ما يسمح بالصوت قبل أول تفاعل — أول ضغطة بالصفحة تفعّله
+    if (soundOn) document.addEventListener('click', function () { getAudioCtx_(); }, { once: true });
     if (getStaffSession()) enterApp();
   })();
 </script>
